@@ -32,12 +32,12 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    maxHeapSize = "512m"
     maxParallelForks = 1 // Intra-Task - Prevents Worker 1 (:server:test) from spawning multiple JVMs. It runs all server test specs sequentially inside a single JVM process.
 }
 
 tasks.withType<AbstractTestTask>().configureEach {
     testLogging {
-        outputs.upToDateWhen { false }
         showStandardStreams = true
         showExceptions = false
         events(TestLogEvent.FAILED)

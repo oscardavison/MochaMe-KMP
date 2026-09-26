@@ -485,78 +485,77 @@ class SessionHandleTest : FunSpec({
     }
 
 
-    test("should process staged frames and switch to live broadcast seamlessly when actor enqueues across multiple suspension cycles") {
-        // Given: Small outbound buffer to force completeBackfill to repeatedly suspend on outboundChannel.send()
-        val config = ServerConfig.Default(
-            outboundChannelCapacity = 2,
-            outboundStagingCapacity = 100
-        )
-        val fakeSession = autoClose(FakeWebSocketSession(Dispatchers.Default))
-        val handle = SessionHandle(
-            nodeId = "node-cutover-suspension",
-            groupId = "group-1",
-            session = fakeSession,
-            config = config
-        )
+    test("should process staged frames and switch to live broadcast seamlessly under concurrent actor broadcasts").config(
+        invocations = 100,
+        timeout = 10.seconds
+    ) {
+        FakeWebSocketSession(Dispatchers.Default).use { fakeSession ->
+            // Given: 4 backfilled, 4 duplicates, 4+ staged frames
+            val handle = SessionHandle(
+                nodeId = "node-cutover-suspension",
+                groupId = "group-1",
+                session = fakeSession
+            )
 
-        val stagedStart = 1
-        val backfillCutoff = 4L
-        val stagedEnd = 8L
-        val broadcastEnd = 50
+            val stagedStart = 1
+            val backfillCutoff = 4L
+            val stagedEnd = 8L
+            val broadcastEnd = 50
 
-        val expectedWatermarks = ((backfillCutoff + 1L)..broadcastEnd).toList()
-        val expectedCount = expectedWatermarks.size
+            val expectedWatermarks = ((backfillCutoff + 1L)..broadcastEnd).toList()
+            val expectedCount = expectedWatermarks.size
 
-        val enqueueResults = mutableListOf<EnqueueResult>()
+            val enqueueResults = mutableListOf<EnqueueResult>()
 
-        // And: Seed staged frames (period in between peer registration and its backfill database snapshot)
-        for (w in stagedStart..stagedEnd) {
-            handle.enqueueBroadcast(w, Frame.Text("$w"))
-        }
-
-        val startGate = CompletableDeferred<Unit>()
-        val readyUps = List(2) { CompletableDeferred<Unit>() }
-
-        // When: Actor broadcasts remaining frames while completeBackfill continuously drains the constrained channel
-        val cioWorkerBackfillJob = launch(Dispatchers.Default) {
-            readyUps[0].complete(Unit)
-            startGate.await()
-            handle.completeBackfill(backfillCutoff)
-        }
-
-        val actorBroadcasterJob = launch(Dispatchers.Default.limitedParallelism(1)) {
-            readyUps[1].complete(Unit)
-            startGate.await()
-            for (w in (stagedEnd + 1L)..broadcastEnd) {
-                enqueueResults.add(handle.enqueueBroadcast(w, Frame.Text("$w")))
+            // And: Seed staged frames (period between peer registration and its backfill database snapshot)
+            for (w in stagedStart..stagedEnd) {
+                handle.enqueueBroadcast(w, Frame.Text("$w"))
             }
+
+            val startGate = CompletableDeferred<Unit>()
+            val readyUps = List(2) { CompletableDeferred<Unit>() }
+
+            // When: Actor broadcasts while completeBackfill starts and runs
+            val cioWorkerBackfillJob = launch(Dispatchers.Default) {
+                readyUps[0].complete(Unit)
+                startGate.await()
+                handle.completeBackfill(backfillCutoff)
+            }
+
+            val actorBroadcasterJob = launch(Dispatchers.Default.limitedParallelism(1)) {
+                readyUps[1].complete(Unit)
+                startGate.await()
+                for (w in (stagedEnd + 1L)..broadcastEnd) {
+                    enqueueResults.add(handle.enqueueBroadcast(w, Frame.Text("$w")))
+                }
+            }
+
+            readyUps.awaitAll()
+            startGate.complete(Unit)
+            cioWorkerBackfillJob.join()
+            actorBroadcasterJob.join()
+
+            // Then: Output must contain all non-deduped frames in exact sequence
+            val receivedFrames = mutableListOf<Frame>()
+            awaitCondition(
+                pollInterval = 5.milliseconds,
+                message = "Expected $expectedCount frames to land in fakeSession"
+            ) {
+                receivedFrames.addAll(fakeSession.drainSentFrames())
+                receivedFrames.size >= expectedCount
+            }
+
+            val receivedWatermarks = receivedFrames
+                .filterIsInstance<Frame.Text>()
+                .map { it.readText().toLong() }
+
+            receivedWatermarks shouldBe expectedWatermarks
+            receivedWatermarks.toSet().size shouldBe expectedCount
+            handle.isBackfilled shouldBe true
+
+            val enqueueResultSet = enqueueResults.toSet()
+            enqueueResultSet.size shouldBe 1
+            enqueueResultSet.first() shouldBe EnqueueResult.Success
         }
-
-        readyUps.awaitAll()
-        startGate.complete(Unit)
-        cioWorkerBackfillJob.join()
-        actorBroadcasterJob.join()
-
-        // Then: Output must contain all non-deduped frames in exact sequence
-        val receivedFrames = mutableListOf<Frame>()
-        awaitCondition(
-            pollInterval = 5.milliseconds,
-            message = "Expected $expectedCount frames to land in fakeSession"
-        ) {
-            receivedFrames.addAll(fakeSession.drainSentFrames())
-            receivedFrames.size >= expectedCount
-        }
-
-        val receivedWatermarks = receivedFrames
-            .filterIsInstance<Frame.Text>()
-            .map { it.readText().toLong() }
-
-        receivedWatermarks shouldBe expectedWatermarks
-        receivedWatermarks.toSet().size shouldBe expectedCount
-        handle.isBackfilled shouldBe true
-
-        val enqueueResultSet = enqueueResults.toSet()
-        enqueueResultSet.size shouldBe 1
-        enqueueResultSet.first() shouldBe EnqueueResult.Success
     }
 })

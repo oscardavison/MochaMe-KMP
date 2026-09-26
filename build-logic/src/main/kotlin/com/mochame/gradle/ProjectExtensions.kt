@@ -29,7 +29,6 @@ fun Project.standardConfigurations() {
 
     tasks.withType<Test>().configureEach {
         testLogging {
-            outputs.upToDateWhen { false }
             showStandardStreams = true
             showExceptions = false
             events(TestLogEvent.FAILED)
