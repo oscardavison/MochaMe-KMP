@@ -9,24 +9,17 @@ import com.mochame.sync.di.SyncInfraModule
 import com.mochame.sync.infrastructure.ClientWebSocketTransport
 import com.mochame.sync.internal.fixtures.network.FakeWebSocketEngine
 import com.mochame.sync.internal.fixtures.network.FakeWebSocketSession
-import com.mochame.sync.spi.network.SyncTransport
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.encode
-import com.mochame.sync.spi.node.NodeContextManager
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.request.HttpRequestData
 import io.ktor.websocket.CloseReason
-import io.ktor.websocket.Frame
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.withTimeout
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import kotlin.time.Duration.Companion.seconds
 
 @Module(
     includes = [
@@ -56,7 +49,7 @@ internal class ClientWebSocketTransportTestEnv(
     val engine: FakeWebSocketEngine,
     val nodeManager: FakeNodeContextManager,
     val logger: Logger
-) {
+) : AutoCloseable {
     var currentSession: FakeWebSocketSession? = null
         private set
 
@@ -66,13 +59,7 @@ internal class ClientWebSocketTransportTestEnv(
     suspend fun awaitSession(): FakeWebSocketSession =
         engine.sessionChannel.receive().also { currentSession = it }
 
-    suspend fun emitToClient(frame: WireFrame) {
-        val session = currentSession ?: awaitSession()
-        session.incomingChannel.send(
-            Frame.Binary(fin = true, data = frame.encode())
-        )
-    }
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun teardown(
         reason: CloseReason = CloseReason(CloseReason.Codes.NORMAL, "Remote disconnect")
     ) {
@@ -80,6 +67,17 @@ internal class ClientWebSocketTransportTestEnv(
             currentSession?.close(reason)
         } catch (_: ClosedSendChannelException) {
         }
-        transport.pause()
+
+        while (!engine.sessionChannel.isEmpty) {
+            try {
+                engine.sessionChannel.receive().close(reason)
+            } catch (_: ClosedSendChannelException) {
+            }
+        }
+        transport.pause() // now implemented structured concurrency (tests not refactored)
+    }
+
+    override fun close() {
+        transport.close()
     }
 }

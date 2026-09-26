@@ -41,6 +41,7 @@ import org.koin.core.KoinApplication
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.modules
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -814,7 +815,7 @@ class DefaultSyncCoordinatorTest : MochaPlatformTest() {
             koinSetup = {
                 modules(
                     module {
-                        single<CoroutineDispatcher>(qualifier = named<IoContext>()) {
+                        single<CoroutineContext>(qualifier = named<IoContext>()) {
                             Dispatchers.Default
                         }
 

@@ -76,20 +76,17 @@ inline fun <reified T : RoomDatabase, reified E : Any> runDatabaseEnvironment(
     ).build()
 
     koin.loadModules(listOf(module { single<T> { database } }))
+    var environment: E? = null
 
     try {
-        val environment = koin.get<E>()
-        environment.block(this)
+        koin.get<E>().also { environment = it }.block(this)
     } catch (e: Exception) {
         e.reportAndThrowFailure()
     } finally {
-        database.close()
-        try {
-            koin.getOrNull<TestTeardownHook>()?.onTeardown()
-        } catch (e: Exception) {
-            println("Error on test closure. Teardown hook execution failed: ${e.message}")
+        performTestTeardown(environment, koin) {
+            database.close()
+            koinApp.close()
         }
-        koinApp.close()
     }
 }
 

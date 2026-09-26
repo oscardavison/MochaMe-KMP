@@ -73,10 +73,10 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
         crossinline computeChange: suspend (existing: T?) -> T,
         crossinline persist: suspend (stamped: T) -> Long,
         crossinline onSkip: (fallback: T?) -> Long
-    ): Long = withContext(deps.ioContext) {
+    ): Long {
         deps.bootProvider.awaitReady()
 
-        deps.locker.withLock(featureContext, candidateKey) {
+        return deps.locker.withLock(featureContext, candidateKey) {
             if (incomingHlc != null) {
                 executeIntentPipeline(
                     candidateKey = candidateKey,
@@ -102,6 +102,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
             }
         }
     }
+
 
     @PublishedApi
     internal suspend inline fun executeIntentPipeline(
@@ -176,15 +177,18 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
         crossinline computeChange: suspend (existing: T?) -> T,
         crossinline persist: suspend (stamped: T) -> Long,
         crossinline onSkip: (fallback: T?) -> Long
-    ) = processIntent(
-        candidateKey,
-        incomingHlc,
-        op,
-        fetchExistingState,
-        computeChange,
-        persist,
-        onSkip
-    )
+    ) = withContext(deps.ioContext) {
+        processIntent(
+            candidateKey,
+            incomingHlc,
+            op,
+            fetchExistingState,
+            computeChange,
+            persist,
+            onSkip
+        )
+    }
+
 
     /**
      * Convenience overload providing the default soft-delete logic.
@@ -209,20 +213,23 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
         crossinline computeChange: suspend (existing: T?) -> T,
         crossinline persist: suspend (stamped: T) -> Long,
         crossinline onSkip: (fallback: T?) -> Long
-    ) = processIntent(
-        candidateKey = candidateKey,
-        incomingHlc = incomingHlc,
-        op = MutationOp.DELETE,
-        fetchExistingState = fetchExistingState,
-        computeChange = computeChange,
-        persist = persist,
-        onSkip = onSkip
-    )
+    ) = withContext(deps.ioContext) {
+        processIntent(
+            candidateKey = candidateKey,
+            incomingHlc = incomingHlc,
+            op = MutationOp.DELETE,
+            fetchExistingState = fetchExistingState,
+            computeChange = computeChange,
+            persist = persist,
+            onSkip = onSkip
+        )
+    }
 
     /**
      * The inheritance pattern exposes this to the feature repositories.
      * Intended use is for a synchronization component to communicate with feature
      * pipelines on inbound payloads, and not to be used by features themselves.
+     * Caller to define the context.
      */
     override suspend fun processRemoteIntent(context: DecodeContext, payload: ByteArray?) {
         if (payload == null) {
@@ -340,7 +347,9 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
                 dbCommitted = true
                 deps.workerHook.invalidate() // could use a channel (will benchmark flow usage first to compare)
                 logger.v {
-                    "Local DB Transaction Committed [key: $candidateKey] [hlc: $hlc]".withTimer(mark)
+                    "Local DB Transaction Committed [key: $candidateKey] [hlc: $hlc]".withTimer(
+                        mark
+                    )
                 }
             }
 

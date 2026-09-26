@@ -83,7 +83,7 @@ internal class SyncCoordinatorTestEnv(
     val syncTransport: FakeSyncTransport,
     val intentStore: FakeSyncIntentStore,
     val quarantineStore: FakeQuarantinedPayloadStore
-) {
+) : AutoCloseable {
     fun assertIntentsProperlyBatched(expectedKeys: Set<Long>) {
         val storedIntents = intentStore.intents
         val encodedIntents = payloadCodec.encodedInvocations.flatten()
@@ -122,5 +122,9 @@ internal class SyncCoordinatorTestEnv(
                 "Intent for key ${intent.candidateKey} must hold a valid leasedAt timestamp"
             )
         }
+    }
+
+    override fun close() {
+        coordinator.close()
     }
 }

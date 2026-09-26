@@ -10,7 +10,9 @@ import kotlin.jvm.JvmInline
 import kotlin.uuid.Uuid
 
 /**
- * Inlines the [bytes] property. Performs no causality logic and is immutable.
+ * Inlines the [bytes] property. Immutable, defining the CRDT structure at the field level for LWW.
+ *
+ * |ProtoTag(1 Byte)|Timestamp(8 Bytes)|Count(2 Bytes)|NodeId(16 Bytes) - 27 Bytes per field.
  */
 @JvmInline
 @PublishedApi

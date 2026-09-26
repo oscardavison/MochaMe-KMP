@@ -4,38 +4,39 @@ import co.touchlab.kermit.Logger
 import com.mochame.annotations.AppBackgroundScope
 import com.mochame.annotations.IoContext
 import com.mochame.annotations.JanitorMutex
-import com.mochame.sync.spi.infrastructure.TransactionProvider
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.logger.withTimer
-import com.mochame.sync.api.hlc.HlcFactory
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.exceptions.toMochaException
-import com.mochame.sync.spi.node.NodeContextManager
-import com.mochame.sync.spi.infrastructure.BlobStore
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
-import com.mochame.sync.domain.usecase.PruneIntentsUseCase
-import com.mochame.sync.spi.boot.BootStatusUpdater
-import com.mochame.sync.spi.policy.ExecutionPolicy
-import com.mochame.sync.spi.models.SyncIntent
-import com.mochame.sync.spi.node.NodeContext
 import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.hlc.HlcFactory
 import com.mochame.sync.api.metadata.SyncStatus
 import com.mochame.sync.domain.config.JanitorMaintenanceConfig
+import com.mochame.sync.domain.usecase.PruneIntentsUseCase
+import com.mochame.sync.spi.boot.BootStatusUpdater
+import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
+import com.mochame.sync.spi.infrastructure.BlobStore
 import com.mochame.sync.spi.infrastructure.SyncWorkerHook
+import com.mochame.sync.spi.infrastructure.TransactionProvider
+import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.spi.node.NodeContext
+import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.orchestration.SyncJanitor
+import com.mochame.sync.spi.policy.ExecutionPolicy
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.koin.core.annotation.Single
@@ -69,17 +70,23 @@ internal class DefaultSyncJanitor(
     private val timeUtils: TimeUtils,
     private val workerHook: SyncWorkerHook,
     @IoContext private val ioContext: CoroutineContext,
-    @AppBackgroundScope private val appBackgroundScope: CoroutineScope,
     @JanitorMutex private val mutex: Mutex,
+    @AppBackgroundScope appBackgroundScope: CoroutineScope,
     logger: Logger
-) : SyncJanitor {
+) : SyncJanitor, AutoCloseable {
     private val logger =
         logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "DrJntr")
+
+    private val janitorJob = SupervisorJob(appBackgroundScope.coroutineContext[Job])
+
+    private val janitorScope = CoroutineScope(
+        appBackgroundScope.coroutineContext + janitorJob + ioContext + CoroutineName("SyncJanitor")
+    )
 
     /**
      * The single entry point for app initialization.
      */
-    override fun startupChecks(): Job = appBackgroundScope.launch(ioContext) {
+    override fun startupChecks(): Job = janitorScope.launch(CoroutineName("Janitor-Startup")) {
         try {
             withTimeout(config.startupTimeout) {
                 executor.execute("[Startup Checks]") {
@@ -109,7 +116,7 @@ internal class DefaultSyncJanitor(
         return currentState is BootState.Init
     }
 
-    private suspend fun initHydration() = withTimeout(5.seconds) { // just testing timeouts?
+    private suspend fun initHydration() = withTimeout(5.seconds) { // not needed
         val nodeContext = nodeManager.getOrEstablishContext()
         logger.v { "Hydrating HLC | Last Known Local HLC: ${nodeContext.maxHlc ?: "NONE"} | NodeID: ${nodeContext.nodeId}" }
         hlcFactory.hydrate(nodeContext.maxHlc, nodeContext.nodeId)
@@ -122,8 +129,8 @@ internal class DefaultSyncJanitor(
         logger.i { "Stale state maintenance complete".withTimer(mark) }
     }
 
-    override fun startRuntimeMaintenance(): Job {
-        return appBackgroundScope.launch(ioContext) {
+    override fun startRuntimeMaintenance(): Job =
+        janitorScope.launch(CoroutineName("Janitor-RuntimeMaintenance")) {
             while (isActive) {
                 delay(config.maintenanceInterval)
                 mutex.withLock {
@@ -133,12 +140,14 @@ internal class DefaultSyncJanitor(
                     try {
                         intentReconciliation()
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         logger.e(e) { "Intent reconciliation encountered error: ${e.message}" }
                     }
 
                     try {
                         pruneAgedIntents()
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         logger.e(e) { "Intent pruning encountered error: ${e.message}" }
                     }
 
@@ -146,7 +155,7 @@ internal class DefaultSyncJanitor(
                 }
             }
         }
-    }
+
 
     /**
      * Prunes in chunks then yields, based off the limit defaulting to
@@ -163,7 +172,7 @@ internal class DefaultSyncJanitor(
      * database commit, meaning a retry is possible.
      * If there was a crash prior to the database commit,
      */
-    private suspend fun blobReconciliation() = withContext(ioContext) {
+    private suspend fun blobReconciliation() {
         val pendingHashes = try {
             blobStore.listPendingHashes()
         } catch (e: Exception) {
@@ -182,6 +191,7 @@ internal class DefaultSyncJanitor(
                     blobStore.abort(hash)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 logger.e(e) { "Failed to reconcile individual blob: $hash" }
             }
         }
@@ -191,6 +201,7 @@ internal class DefaultSyncJanitor(
         try {
             blobStore.clearIncompleteStaging()
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             logger.w(e) { "Purging incomplete staged files terminated: ${e.message}" }
         }
     }
@@ -245,6 +256,10 @@ internal class DefaultSyncJanitor(
     private fun MochaException.toBootState(): BootState = when (this) {
         is MochaException.Transient -> BootState.TransientFailure(this.message, this)
         else -> BootState.LockOut(this.message, this)
+    }
+
+    override fun close() {
+        janitorJob.cancel()
     }
 
 }

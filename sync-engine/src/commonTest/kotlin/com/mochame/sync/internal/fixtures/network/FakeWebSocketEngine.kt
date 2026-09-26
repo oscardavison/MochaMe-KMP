@@ -12,6 +12,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headers
 import io.ktor.util.date.GMTDate
 import io.ktor.utils.io.InternalAPI
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.ContinuationInterceptor
@@ -46,6 +47,7 @@ class FakeWebSocketEngine(
      * When populated, forces the subsequent HTTP handshake to fail with the provided exception.
      */
     var failureOnConnect: Throwable? = null
+    var connectGate: CompletableDeferred<Unit>? = null
 
     /**
      * Intercepts Ktor's client request pipeline, simulating a successful protocol switch.
@@ -54,6 +56,8 @@ class FakeWebSocketEngine(
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
         failureOnConnect?.let { throw it }
         handshakeRequests.send(data)
+        connectGate?.await()
+
         val session = onConnect(data)
         sessionChannel.send(session)
 

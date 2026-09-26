@@ -3,6 +3,7 @@ package com.mochame.sync.orchestration
 import co.touchlab.kermit.Logger
 import com.mochame.annotations.AppBackgroundScope
 import com.mochame.annotations.CoordinatorMutex
+import com.mochame.annotations.IoContext
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.logger.withTimer
@@ -30,10 +31,12 @@ import com.mochame.sync.tryWithLock
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -41,10 +44,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.koin.core.annotation.Single
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-data class InFlightBatch (
+data class InFlightBatch(
     val batchId: Long,
     val deferred: CompletableDeferred<Unit>
 )
@@ -64,12 +69,22 @@ internal class DefaultSyncCoordinator(
     private val intentStore: SyncIntentMaintenanceStore,
     private val quarantinedPayloadStore: QuarantinedPayloadStore,
     @CoordinatorMutex private val coordinatorMutex: Mutex,
-    @AppBackgroundScope private val appBackgroundScope: CoroutineScope,
+    @IoContext private val ioContext: CoroutineContext,
+    @AppBackgroundScope appBackgroundScope: CoroutineScope,
     receivers: List<SyncReceiver>,
     logger: Logger
-) : SyncCoordinator {
+) : SyncCoordinator, AutoCloseable {
     private val logger =
         logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "MsCord")
+
+    private val coordinatorJob = SupervisorJob(appBackgroundScope.coroutineContext[Job])
+
+    private val coordinatorScope = CoroutineScope(
+        appBackgroundScope.coroutineContext + coordinatorJob + CoroutineName("SyncCoordinator")
+    )
+
+    private val backgroundDispatcher = coordinatorScope.coroutineContext[ContinuationInterceptor]
+        ?: error("Dispatcher retrieval error")
 
     @Volatile
     private var inFlightBatch: InFlightBatch? = null
@@ -88,7 +103,9 @@ internal class DefaultSyncCoordinator(
     /**
      * No Mutex here.
      */
-    override fun startOutboundListener(): Job = appBackgroundScope.launch {
+    override fun startOutboundListener(): Job = coordinatorScope.launch(
+        CoroutineName("OutboundListener")
+    ) {
         try {
             bootManager.awaitReady()
         } catch (e: Exception) {
@@ -168,7 +185,9 @@ internal class DefaultSyncCoordinator(
         }
 
         val intents = try {
-            payloadCodec.decode(inbound)
+            withContext(backgroundDispatcher + CoroutineName("Inbound-Decode-$watermark")) {
+                payloadCodec.decode(inbound)
+            }
         } catch (e: Exception) {
             handlePayloadDecodeError(watermark, inbound, e)
             return
@@ -182,26 +201,37 @@ internal class DefaultSyncCoordinator(
             return
         }
 
-        var maxValidHlc: HLC? = null
-        val mark = TimeSource.Monotonic.markNow()
-        var acceptedCount = 0
+        processInboundIntents(watermark, intents)
+    }
 
-        executor.execute("Inbound Watermark[$watermark]:") {
+    private suspend fun processInboundIntents(
+        watermark: Long,
+        intents: List<SyncIntent>
+    ) = withContext(ioContext + CoroutineName("Inbound-Persist-$watermark")) {
+        var maxValidHlc: HLC? = null
+        var acceptedCount = 0
+        val mark = TimeSource.Monotonic.markNow()
+
+        executor.execute("Inbound Watermark[$watermark]") {
             transactor.runImmediateTransaction {
                 intents.forEach { intent ->
                     try {
+                        // Feature layer executes synchronously without context hops
                         orchestrateIntent(intent)
                         maxValidHlc = maxValidHlc?.let { maxOf(it, intent.hlc) } ?: intent.hlc
                         acceptedCount++
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         handleInboundIntentError(intent, watermark, e)
                     }
                 }
 
+                // HLC witness and floor updates happen here directly on the IO thread
                 maxValidHlc?.let {
                     hlcFactory.witness(it)
                     nodeManager.updateHlcFloor(it)
                 }
+
                 nodeManager.commitInboundWatermark(watermark, timeUtils.now())
             }
         }
@@ -410,5 +440,9 @@ internal class DefaultSyncCoordinator(
                 throw e
             }
         }
+    }
+
+    override fun close() {
+        coordinatorJob.cancel()
     }
 }

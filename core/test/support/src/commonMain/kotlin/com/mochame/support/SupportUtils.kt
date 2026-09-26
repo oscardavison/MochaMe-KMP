@@ -7,6 +7,7 @@ import com.mochame.annotations.DefaultContext
 import com.mochame.annotations.IoContext
 import com.mochame.annotations.MainContext
 import com.mochame.logger.test.TestLoggerModule
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -14,7 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import org.koin.core.annotation.Configuration
+import org.koin.core.Koin
 import org.koin.core.module.Module
 import org.koin.core.qualifier.qualifier
 import org.koin.dsl.module
@@ -52,14 +53,14 @@ class TestSupportModule
  * Generates the test context bindings dynamically.
  */
 fun TestScope.bindAsKoinModule(): Module {
-    val dispatcher = this.coroutineContext[ContinuationInterceptor]
+    val testDispatcher = this.coroutineContext[ContinuationInterceptor]
         ?: throw IllegalStateException("Error fetching the dispatcher of an established test scope.")
 
     return module {
-        single<CoroutineContext> { dispatcher }
-        single<CoroutineContext>(qualifier<IoContext>()) { dispatcher }
-        single<CoroutineContext>(qualifier<MainContext>()) { dispatcher }
-        single<CoroutineContext>(qualifier<DefaultContext>()) { dispatcher }
+        single<CoroutineContext> { testDispatcher }
+        single<CoroutineContext>(qualifier<IoContext>()) { testDispatcher + CoroutineName("Test-IO") }
+        single<CoroutineContext>(qualifier<MainContext>()) { testDispatcher + CoroutineName("Test-Main") }
+        single<CoroutineContext>(qualifier<DefaultContext>()) { testDispatcher + CoroutineName("Test-Default") }
 
         single<CoroutineScope>(qualifier<AppBackgroundScope>()) { this@bindAsKoinModule }
     }
@@ -114,8 +115,7 @@ suspend fun awaitCondition(
                     delay(pollInterval)
                 }
             }
-        }
-        catch (e: TimeoutCancellationException){
+        } catch (e: TimeoutCancellationException) {
             throw AssertionError("$message (timed out after $timeout)", e)
         }
     }
@@ -123,4 +123,25 @@ suspend fun awaitCondition(
 
 fun interface TestTeardownHook {
     fun onTeardown()
+}
+
+@PublishedApi
+internal inline fun performTestTeardown(
+    environment: Any?,
+    koin: Koin,
+    onCloseKoin: () -> Unit
+) {
+    try {
+        (environment as? AutoCloseable)?.close()
+    } catch (e: Exception) {
+        println("WARNING: Environment close failed: ${e.message}")
+    }
+
+    try {
+        koin.getOrNull<TestTeardownHook>()?.onTeardown()
+    } catch (e: Exception) {
+        println("WARNING: Teardown hook failed: ${e.message}")
+    }
+
+    onCloseKoin()
 }

@@ -32,7 +32,7 @@ application {
 
 tasks.test {
     useJUnitPlatform()
-    maxParallelForks = 1
+    maxParallelForks = 1 // Intra-Task - Prevents Worker 1 (:server:test) from spawning multiple JVMs. It runs all server test specs sequentially inside a single JVM process.
 }
 
 tasks.withType<AbstractTestTask>().configureEach {

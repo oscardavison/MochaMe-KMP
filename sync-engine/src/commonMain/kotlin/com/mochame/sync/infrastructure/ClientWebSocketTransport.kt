@@ -26,9 +26,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -51,11 +53,11 @@ import kotlin.time.Duration.Companion.seconds
  */
 @Single(binds = [SyncTransport::class])
 internal class ClientWebSocketTransport(
-    @AppBackgroundScope private val backgroundScope: CoroutineScope,
     private val nodeManager: NodeContextManager,
+    @AppBackgroundScope backgroundScope: CoroutineScope,
     engine: HttpClientEngine,
     logger: Logger
-) : SyncTransport {
+) : SyncTransport, AutoCloseable {
 
     private val logger =
         logger.withTags(LogTags.Layer.TRANSPORT, LogTags.Domain.SYNC, "ClSock")
@@ -71,6 +73,12 @@ internal class ClientWebSocketTransport(
         val port: Int,
         val groupId: String,
         val nodeId: String
+    )
+
+    private val transportJob = SupervisorJob(backgroundScope.coroutineContext[Job])
+
+    private val transportScope = CoroutineScope(
+        backgroundScope.coroutineContext + transportJob + CoroutineName("ClientTransport")
     )
 
     /**
@@ -132,7 +140,8 @@ internal class ClientWebSocketTransport(
     }
 
     private suspend fun awaitReconnect(delay: Duration) {
-        while (reconnectSignal.tryReceive().isSuccess) { /* Drain stale triggers */ }
+        while (reconnectSignal.tryReceive().isSuccess) { /* Drain stale triggers */
+        }
         withTimeoutOrNull(delay) { reconnectSignal.receive() }
     }
 
@@ -178,7 +187,7 @@ internal class ClientWebSocketTransport(
         lifecycleMutex.withLock {
             if (isPaused.value || pauseDebounceJob?.isActive == true) return@withLock
 
-            pauseDebounceJob = backgroundScope.launch(CoroutineName("PauseDebounce")) {
+            pauseDebounceJob = transportScope.launch(CoroutineName("PauseDebounce")) {
                 delay(5.seconds)
                 lifecycleMutex.withLock {
                     isPaused.value = true
@@ -219,7 +228,7 @@ internal class ClientWebSocketTransport(
         if (session != null) {
             val listener = onDisconnectedListener
             if (listener != null) {
-                backgroundScope.launch(CoroutineName("DisconnectListener")) { listener.invoke() }
+                transportScope.launch(CoroutineName("Teardown-DisconnectListener")) { listener.invoke() }
             }
             try {
                 withTimeoutOrNull(500.milliseconds) {
@@ -239,32 +248,49 @@ internal class ClientWebSocketTransport(
         val target = endpoint ?: return
         if (connectionJob?.isActive == true) return
 
-        connectionJob = backgroundScope.launch(CoroutineName("ConnectionLoop")) {
+        connectionJob = transportScope.launch(CoroutineName("ConnectionLoop")) {
             while (isActive && !isPaused.value) {
                 try {
-                    runSingleSession(target)
+                    try {
+                        runSingleSession(target)
+                    } finally {
+                        activeSession.getAndSet(null)?.let {
+                            val listener = onDisconnectedListener
+                            if (listener != null) {
+                                transportScope.launch(CoroutineName("Normal-DisconnectedListener")) { listener.invoke() }
+                            }
+                        }
+                    }
 
                     if (isActive && !isPaused.value) {
                         logger.i { "WebSocket channel closed. Attempting reconnection in 30s..." }
                         awaitReconnect(30.seconds)
                     }
+
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: MochaException.Persistent) {
-                    logger.e(e) { "[${e::class.simpleName}] ${e.message}. Terminating connection until manual trigger." }
-                    break
                 } catch (e: Exception) {
                     when (e) {
-                        is IOException, is ResponseException -> {
-                            logger.w(e) { "[${e::class.simpleName}] ${e.message}. Retrying in 20s..." }
-                            awaitReconnect(20.seconds)
+                        is IOException -> {
+                            logger.w(e) { "Network transport failure: ${e.message}. Retrying in 10s..." }
+                            awaitReconnect(10.seconds)
                         }
+
+                        is ClosedReceiveChannelException, is ClosedSendChannelException -> {
+                            logger.w(e) { "Channel closed abruptly by remote peer. Retrying in 10s..." }
+                            awaitReconnect(10.seconds)
+                        }
+
+                        is ResponseException -> {
+                            logger.w(e) { "Handshake HTTP error [${e.response.status}]. Retrying in 10s..." }
+                            awaitReconnect(10.seconds)
+                        }
+
                         else -> {
-                            logger.e(e) { "Unexpected error in connection loop: ${e.message}. Terminating connection..." }
+                            logger.e(e) { "Error in connection loop: ${e.message}. Terminated Connection." }
+                            break
                         }
                     }
-                } finally {
-                    activeSession.value = null
                 }
             }
         }
@@ -309,20 +335,29 @@ internal class ClientWebSocketTransport(
             activeSession.value = this
             reconnectSignal.tryReceive()
 
-            try {
-                logger.i { "WebSocket connected to ${target.host}:${target.port} (Since Watermark: $currentWatermark)" }
+            logger.i { "WebSocket connected to ${target.host}:${target.port} (Since Watermark: $currentWatermark)" }
 
-                for (frame in incoming) {
-                    if (frame is Frame.Binary) {
+            for (frame in incoming) {
+                if (frame is Frame.Binary) {
+                    try {
                         dispatchWireFrame(frame.readBytes())
-                    }
-                }
-            } finally {
-                val wasActive = activeSession.compareAndSet(this, null)
-                if (wasActive) {
-                    val listener = onDisconnectedListener
-                    if (listener != null) {
-                        backgroundScope.launch { listener.invoke() }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        val closeReason = when (e) {
+                            is MochaException.Persistent -> CloseReason(
+                                CloseReason.Codes.INTERNAL_ERROR,
+                                "Unrecoverable client state"
+                            )
+
+                            else -> CloseReason(
+                                CloseReason.Codes.TRY_AGAIN_LATER,
+                                "Inbound ingestion error"
+                            )
+                        }
+                        runCatching { close(closeReason) }
+
+                        throw e
                     }
                 }
             }
@@ -333,11 +368,11 @@ internal class ClientWebSocketTransport(
      * Does not catch illegal state exceptions. If the payload was corrupt, current behavior is to terminate
      * the session immediately for debugging, and to allow reconnection to trigger a backfill and retry.
      */
-    private suspend fun DefaultClientWebSocketSession.dispatchWireFrame(bytes: ByteArray) {
+    private suspend fun dispatchWireFrame(bytes: ByteArray) {
         when (val wireFrame = WireFrameFactory.unwrap(bytes)) {
             is WireFrame.BackfillComplete -> {
                 logger.i { "Backfill complete. Triggering outbound pipeline flush." }
-                backgroundScope.launch {
+                transportScope.launch(CoroutineName("OnConnectedFlush")) {
                     onConnectedListener?.invoke()
                 }
             }
@@ -347,18 +382,18 @@ internal class ClientWebSocketTransport(
             }
 
             is WireFrame.Delta -> {
-                try {
-                    inboundDeltaHandler?.invoke(wireFrame.watermark, wireFrame.payload)
-                } catch (e: Exception) { // Likely to be persistent state errors
-                    close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Inbound ingestion error"))
-                    throw e
-                }
+                inboundDeltaHandler?.invoke(wireFrame.watermark, wireFrame.payload)
             }
 
             is WireFrame.ClientSubmit -> {
                 logger.w { "Device received an unexpected client submit frame [BatchId: ${wireFrame.batchId}] [Size: ${wireFrame.payload.size}]" }
             }
         }
+    }
+
+    override fun close() {
+        transportJob.cancel()
+        client.close()
     }
 }
 

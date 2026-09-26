@@ -85,7 +85,6 @@ class RelayServer(
      * 4. Closes the underlying [database] connection pool.
      */
     override fun close() {
-        pruningJob?.cancel()
         serverScope.cancel()
         engine?.stop(gracePeriodMillis = 1000, timeoutMillis = 3000)
         database.close()

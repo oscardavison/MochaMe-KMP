@@ -10,7 +10,6 @@ import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.repository.LocalFirstDependencies
 import com.mochame.sync.api.repository.LocalFirstRepository
 import com.mochame.sync.spi.infrastructure.SyncReceiver
-import com.mochame.utils.interfaces.MochaTimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
@@ -18,7 +17,6 @@ import org.koin.core.annotation.Single
 
 @Single([DailyContextRepository::class, SyncReceiver::class])
 class DefaultDailyContextRepository(
-    private val timeUtils: MochaTimeUtils,
     private val dailyContextDao: DailyContextDao,
     codecRouter: DailyContextCodecRouter,
     logger: Logger,

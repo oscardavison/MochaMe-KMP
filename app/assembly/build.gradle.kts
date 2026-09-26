@@ -1,5 +1,6 @@
 plugins {
     id("mocha.convention.assembler")
+    alias(libs.plugins.atomicfu.compiler)
 }
 
 kotlin {
@@ -7,6 +8,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.kotlinx.atomicfu)
+
             api(project(":core:platform"))
             implementation(project(":core:sync-api"))
             implementation(project(":node"))

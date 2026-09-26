@@ -10,6 +10,7 @@ import com.mochame.node.fixtures.di.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.support.TestSupportModule
+import com.mochame.support.TestTeardownHook
 import com.mochame.sync.di.SyncProductionModule
 import com.mochame.sync.di.domain.SyncPruneIntentsTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
@@ -63,4 +64,9 @@ internal data class JanitorTestEnv(
     val transactor: FakeTransactionProvider,
     val executor: FakeExecutionPolicy,
     @JanitorMutex val janitorMutex: Mutex,
-)
+) : AutoCloseable {
+
+    override fun close() {
+        janitor.close()
+    }
+}

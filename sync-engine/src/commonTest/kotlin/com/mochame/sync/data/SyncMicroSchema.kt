@@ -9,13 +9,17 @@ import androidx.room.TypeConverters
 
 @ConstructedBy(SyncMicroSchemaConstructor::class)
 @Database(
-    entities = [SyncIntentEntity::class],
+    entities = [
+        SyncIntentEntity::class,
+        QuarantinedPayloadEntity::class
+    ],
     version = 1,
     exportSchema = false
 )
 @TypeConverters(SyncConverters::class)
 internal abstract class SyncMicroSchema : RoomDatabase() {
     internal abstract fun syncIntentDao(): SyncIntentDao
+    internal abstract fun quarantinedPayloadDao(): QuarantinedPayloadDao
 
     internal companion object {
         const val NAME = "sync_micro_schema.db"

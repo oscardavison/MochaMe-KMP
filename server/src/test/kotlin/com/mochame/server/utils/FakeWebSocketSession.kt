@@ -33,7 +33,7 @@ class FakeWebSocketSession(
     private val sessionJob = SupervisorJob(parentContext[Job])
     override val coroutineContext: CoroutineContext = parentContext + sessionJob
 
-    init {
+    init { // Leaving as originally this was confusing
         parentContext[Job.Key]?.invokeOnCompletion {
             close()
         }

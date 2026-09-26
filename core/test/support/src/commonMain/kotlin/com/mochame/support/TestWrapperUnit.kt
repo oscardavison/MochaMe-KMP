@@ -25,18 +25,15 @@ inline fun <reified E : Any> runUnitEnvironment(
     }
 
     val koin = koinApp.koin
+    var environment: E? = null
 
     try {
-        val environment = koin.get<E>()
-        environment.block(this)
+        koin.get<E>().also { environment = it }.block(this)
     } catch (e: Exception) {
         e.reportAndThrowFailure()
     } finally {
-        try {
-            koin.getOrNull<TestTeardownHook>()?.onTeardown()
-        } catch (e: Exception) {
-            println("WARNING: Teardown hook execution failed: ${e.message}")
+        performTestTeardown(environment, koin) {
+            koinApp.close()
         }
-        koinApp.close()
     }
 }

@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalog
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.tasks.testing.AbstractTestTask
+import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.getByType
@@ -26,13 +27,15 @@ fun Project.standardConfigurations() {
         }
     }
 
-    tasks.withType<AbstractTestTask>().configureEach {
+    tasks.withType<Test>().configureEach {
         testLogging {
             outputs.upToDateWhen { false }
             showStandardStreams = true
             showExceptions = false
             events(TestLogEvent.FAILED)
         }
+        //Individual Test JVMs (GradleWorkerMain): Caps each test runner at 768 MB instead of letting them default
+        maxHeapSize = "512m"
     }
 }
 
