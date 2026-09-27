@@ -61,7 +61,7 @@ class BootStatusManagerTest : MochaPlatformTest() {
         updateState(failureState)
 
         assertEquals(failureState, bootState.value)
-        assertEquals(errorException, failureState.exception)
+        assertEquals(errorException, failureState.cause)
     }
 
     @Test

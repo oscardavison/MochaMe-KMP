@@ -1,15 +1,31 @@
 package com.mochame.sync.api.boot
 
-sealed class BootState {
-    object Idle : BootState() {
+
+sealed interface BootState {
+    object Idle : BootState {
         override fun toString() = "Idle"
     }
-    object Init : BootState() {
+
+    object Init : BootState {
         override fun toString() = "Init"
     }
-    object Ready : BootState() {
+
+    object Ready : BootState {
         override fun toString() = "Ready"
     }
-    data class TransientFailure(val message: String, val exception: Exception? = null) : BootState()
-    data class LockOut(val message: String, val exception: Exception? = null) : BootState()
+
+    sealed interface Failure : BootState {
+        val message: String
+        val cause: Exception?
+    }
+
+    data class TransientFailure(
+        override val message: String,
+        override val cause: Exception? = null
+    ) : Failure
+
+    data class LockOut(
+        override val message: String,
+        override val cause: Exception? = null
+    ) : Failure
 }

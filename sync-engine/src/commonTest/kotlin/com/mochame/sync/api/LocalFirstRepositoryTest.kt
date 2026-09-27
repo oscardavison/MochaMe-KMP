@@ -64,8 +64,7 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
             val rootCause = IllegalStateException("Corrupt local database")
             bootProvider.updateState(
                 BootState.LockOut(
-                    message = "DB_CORRUPT",
-                    exception = rootCause
+                    message = "DB_CORRUPT", cause = rootCause
                 )
             )
 

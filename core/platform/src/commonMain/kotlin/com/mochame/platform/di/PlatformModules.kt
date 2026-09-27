@@ -48,8 +48,9 @@ class CommonPlatformModule {
     @Single(binds = [CoroutineScope::class, AutoCloseable::class])
     @AppBackgroundScope
     fun provideBackgroundAppScope(
-        @DefaultContext context: CoroutineContext
-    ): AppBackgroundScopeOwner = AppBackgroundScopeOwner(context)
+        @DefaultContext context: CoroutineContext,
+        logger: Logger
+    ): AppBackgroundScopeOwner = AppBackgroundScopeOwner(context, logger)
 }
 
 @Module

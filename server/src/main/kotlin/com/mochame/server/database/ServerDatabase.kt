@@ -356,7 +356,7 @@ fun CoroutineScope.runtimeLogPruning(
         try {
             val cutoff = clock.now() - retention
             val pruned = database.pruneExpiredDeltas(cutoff.toEpochMilliseconds())
-            logger.i { "Deltas pruned from log: $pruned" }
+            logger.i { "Pruned: $pruned" }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

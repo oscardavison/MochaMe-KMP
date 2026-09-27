@@ -18,8 +18,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Single
+import kotlin.time.Duration.Companion.seconds
 
 interface AppInitializer {
     fun startBootSequence(): Job
@@ -32,7 +34,8 @@ internal class DefaultAppInitializer(
     private val bootUpdater: BootStatusUpdater,
     private val transport: SyncTransport,
     private val connectionEndPoint: NetworkConfig,
-    @AppBackgroundScope appBackgroundScope: CoroutineScope,
+    private val database: MochaMeDatabase,
+    @AppBackgroundScope private val appBackgroundScope: CoroutineScope,
     logger: Logger
 ) : AppInitializer, AutoCloseable {
 
@@ -45,9 +48,11 @@ internal class DefaultAppInitializer(
     )
 
     private val activeBootJob = atomic<Job?>(null)
+    private val isDatabaseClosed = atomic(false)
 
     init {
         startBootSequence()
+        registerShutdownHook()
     }
 
     override fun startBootSequence(): Job {
@@ -76,6 +81,7 @@ internal class DefaultAppInitializer(
             logger.i { "Initializing application..." }
 
             janitor.startupChecks().join()
+            delay(3.seconds) // so i get to see wheel spin :)
 
             bootUpdater.updateState(BootState.Ready)
             logger.i { "Application initialized successfully..." }
@@ -116,7 +122,28 @@ internal class DefaultAppInitializer(
         }
     }
 
+    private fun registerShutdownHook() {
+        appBackgroundScope.coroutineContext[Job]?.invokeOnCompletion { cause ->
+            logger.d { "Closing database..." }
+            closeDatabase()
+        }
+    }
+
+    private fun closeDatabase() {
+        if (isDatabaseClosed.compareAndSet(expect = false, update = true)) {
+            try {
+                database.close()
+                logger.d { "Database closed." }
+            } catch (e: Exception) {
+                logger.e(e) { "Failed to close database during scope shutdown." }
+            }
+        }
+    }
+
     override fun close() {
         initializerJob.cancel()
+        closeDatabase()
     }
+
+
 }

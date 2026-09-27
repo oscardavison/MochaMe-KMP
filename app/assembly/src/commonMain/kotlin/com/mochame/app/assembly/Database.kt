@@ -44,7 +44,7 @@ import com.mochame.telemetry.data.TopicEntity
         BookEntity::class,
         QuoteEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(MochaConverters::class, SyncConverters::class)

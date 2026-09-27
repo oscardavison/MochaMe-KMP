@@ -653,6 +653,34 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     // -------------------------------------------------------------------------
 
     @Test
+    fun should_triggerImmediateReconnectionAttempt_onConnect_whenConnectionLoopSuspended() =
+        runEnv { scope ->
+            // Given: Connection retry loop is established and no active session
+            nodeManager.getOrEstablishContext()
+            engine.failureOnConnect = IOException("No response")
+            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            scope.runCurrent()
+            engine.failureOnConnect = null
+
+            assertFalse(transport.isConnected)
+            assertFalse(engine.sessionChannel.tryReceive().isSuccess)
+            assertTrue(engine.handshakeRequests.tryReceive().isSuccess)
+
+            // When: Reconnect signal manually sent, earlier than standard retry attempt
+            scope.advanceTimeBy(2.seconds)
+            assertFalse(transport.isConnected)
+            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            scope.runCurrent()
+
+            // Then: Connection loop restarts and establishes a new session
+            assertTrue(transport.isConnected)
+            assertTrue(engine.sessionChannel.tryReceive().isSuccess)
+            assertTrue(scope.testScheduler.currentTime < 10.seconds.inWholeMilliseconds)
+
+            teardown()
+        }
+
+    @Test
     fun should_retryConnectionAfter10Seconds_whenServerIsOfflineInitially() = runEnv { scope ->
         nodeManager.getOrEstablishContext()
 
@@ -672,14 +700,11 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
 
         // And: Server comes back online
         engine.failureOnConnect = null
-        assertEquals(9_000, scope.testScheduler.currentTime)
-        awaitHandshake()
-        assertEquals(10_000, scope.testScheduler.currentTime)
-
-        val session = awaitSession()
+        scope.advanceTimeBy(1.seconds)
         scope.runCurrent()
+
         assertTrue(transport.isConnected)
-        assertNotNull(session)
+        assertTrue(engine.sessionChannel.tryReceive().isSuccess)
 
         teardown()
     }

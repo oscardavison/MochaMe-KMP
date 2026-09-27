@@ -224,8 +224,6 @@ class SessionHandle(
     ) {
          if (!isClosed.compareAndSet(false, true)) return
 
-        logger.d { "Closing session for node '$nodeId' [${code.name}]: $reason" }
-
         val sanitizedReason = if (reason.length > 75) reason.take(40) + "..." else reason
 
         outboundChannel.cancel(CancellationException(reason))
@@ -234,6 +232,7 @@ class SessionHandle(
             withContext(NonCancellable) {
                 try {
                     session.close(CloseReason(code, sanitizedReason))
+                    logger.d { "Closed session for node '$nodeId' [${code.name}]: $reason" }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

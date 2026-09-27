@@ -172,7 +172,7 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
             val finalState = awaitItem()
             assertTrue(finalState is BootState.LockOut)
 
-            assertTrue(finalState.exception is MochaException.Persistent.ClockSkew)
+            assertTrue(finalState.cause is MochaException.Persistent.ClockSkew)
 
             // Verify the logs
             val log = writer.logs.find { it.message.contains("Clock Skew") }
@@ -202,7 +202,7 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
                 finalState is BootState.TransientFailure,
                 "Janitor should have failed on timeout. Got $finalState.."
             )
-            assertTrue(finalState.exception is MochaException.Transient.BootTimeout)
+            assertTrue(finalState.cause is MochaException.Transient.BootTimeout)
         }
 
     @Test
@@ -226,7 +226,7 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
                 val failureState = awaitItem()
 
                 assertTrue(failureState is BootState.TransientFailure)
-                assertTrue(failureState.exception is MochaException.Transient.BootTimeout)
+                assertTrue(failureState.cause is MochaException.Transient.BootTimeout)
             }
 
             janitorMutex.unlock()

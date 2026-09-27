@@ -9,6 +9,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":app:assembly"))
+            implementation(project(":core:sync-api"))
+            implementation(project(":node"))
             implementation(project(":core:utils"))
             implementation(project(":core:logger"))
 
@@ -16,4 +18,8 @@ kotlin {
             implementation(project(":feature:bio:ui"))
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "com.mochame.app.ui.generated.resources"
 }

@@ -151,6 +151,9 @@ internal class ClientWebSocketTransport(
      * If already connected or connecting to this endpoint, this call wakes up any
      * active backoff delay to retry immediately (as in a user clicking retry).
      * Otherwise, it closes any existing connection and starts a new connection loop.
+     *
+     * More than one possible endpoint at a time is not implemented or tested.
+     * Ktor looks like i
      */
     override suspend fun connect(
         host: String,
@@ -272,7 +275,7 @@ internal class ClientWebSocketTransport(
                 } catch (e: Exception) {
                     when (e) {
                         is IOException -> {
-                            logger.w(e) { "Network transport failure: ${e.message}. Retrying in 10s..." }
+                            logger.d(e) { "Network transport failure: ${e.message}. Retrying in 10s..." }
                             awaitReconnect(10.seconds)
                         }
 
@@ -293,34 +296,6 @@ internal class ClientWebSocketTransport(
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * Sends an outbound batch payload to the connected relay.
-     *
-     * @return [SendResult.NoConnection] if the caller is still alive and doing work but the coroutine
-     * termination is upstream,
-     * or [SendResult.Failure] if an error occurs.
-     *
-     * @throws CancellationException if the caller itself was canceled.
-     */
-    override suspend fun send(batchId: Long, payload: ByteArray): SendResult {
-        val session = activeSession.value ?: return SendResult.NoConnection
-
-        return try {
-            val frame = WireFrameFactory.client(batchId, payload)
-            session.send(Frame.Binary(fin = true, data = frame))
-            SendResult.Success
-        } catch (e: CancellationException) {
-            if (currentCoroutineContext().isActive) {
-                SendResult.NoConnection
-            } else {
-                throw e
-            }
-        } catch (e: Exception) {
-            // Only hits local client errors (e.g. WireFrameFactory serialization failure)
-            SendResult.Failure(e)
         }
     }
 
@@ -388,6 +363,34 @@ internal class ClientWebSocketTransport(
             is WireFrame.ClientSubmit -> {
                 logger.w { "Device received an unexpected client submit frame [BatchId: ${wireFrame.batchId}] [Size: ${wireFrame.payload.size}]" }
             }
+        }
+    }
+
+    /**
+     * Sends an outbound batch payload to the connected relay.
+     *
+     * @return [SendResult.NoConnection] if the caller is still alive and doing work but the coroutine
+     * termination is upstream,
+     * or [SendResult.Failure] if an error occurs.
+     *
+     * @throws CancellationException if the caller itself was canceled.
+     */
+    override suspend fun send(batchId: Long, payload: ByteArray): SendResult {
+        val session = activeSession.value ?: return SendResult.NoConnection
+
+        return try {
+            val frame = WireFrameFactory.client(batchId, payload)
+            session.send(Frame.Binary(fin = true, data = frame))
+            SendResult.Success
+        } catch (e: CancellationException) {
+            if (currentCoroutineContext().isActive) {
+                SendResult.NoConnection
+            } else {
+                throw e
+            }
+        } catch (e: Exception) {
+            // Only hits local client errors (e.g. WireFrameFactory serialization failure)
+            SendResult.Failure(e)
         }
     }
 

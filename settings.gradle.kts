@@ -40,6 +40,7 @@ include(":app:assembly")
 include(":app:ui")
 
 include(":core:annotations")
+include(":core:design")
 include(":core:sync-api")
 include(":core:logger")
 include(":core:utils")

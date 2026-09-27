@@ -33,8 +33,12 @@ fun main() {
             fflush(stderr)
         }
     } finally {
-        koinApp.backgroundScope?.close()
-        stopKoin()
+        try {
+            koinApp.backgroundScope?.close()
+            stopKoin()
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
     }
 }
 

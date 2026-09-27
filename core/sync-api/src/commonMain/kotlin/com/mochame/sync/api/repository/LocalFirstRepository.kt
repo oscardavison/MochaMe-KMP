@@ -238,7 +238,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
             )
 
             logger.d { "Branching to overflow processing. [Key: ${context.candidateKey}] [blobId: $blobId]." }
-            // TODO: Call actual overflow fetching/processing here
+            // TODO: This road ends here...
             return
         }
 

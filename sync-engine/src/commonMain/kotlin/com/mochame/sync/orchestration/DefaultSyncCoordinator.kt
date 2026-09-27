@@ -27,7 +27,6 @@ import com.mochame.sync.spi.network.SyncTransport
 import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.orchestration.SyncCoordinator
 import com.mochame.sync.spi.policy.ExecutionPolicy
-import com.mochame.sync.tryWithLock
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -40,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.koin.core.annotation.Single
@@ -135,7 +135,7 @@ internal class DefaultSyncCoordinator(
      */
     @OptIn(FlowPreview::class)
     override suspend fun processQueueUntilExhausted() {
-        coordinatorMutex.tryWithLock {
+        coordinatorMutex.withLock {
 
             if (!syncTransport.isConnected) {
                 logger.v { "Outbound: Transport disconnected. Skipping queue processing." }

@@ -4,6 +4,7 @@ import com.mochame.gradle.getVersionAsString
 import com.mochame.gradle.isMac
 import com.mochame.gradle.libs
 import com.mochame.gradle.standardConfigurations
+import gradle.kotlin.dsl.accessors._7210b2c786089794992553e4167a8a51.sourceSets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -34,25 +35,48 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            implementation(project(":core:annotations"))
+        val commonMainProvider = named("commonMain")
+        val isFixture = project.path.startsWith(":core:test:fixtures-")
 
-//                implementation(libs.compose.material3.adaptive.layout)
-//                implementation(libs.compose.material3.adaptive.navigation)
-            implementation(libs.getLibrary("compose-material3-adaptive-navigation-suite"))
-            implementation(libs.getLibrary("navigation-compose"))
-//          implementation(libs.getLibrary("compose-material3"))
-
-            implementation(libs.getLibrary("androidx-lifecycle-viewmodel"))
-            implementation(libs.getLibrary("androidx-lifecycle-runtimeCompose"))
-            implementation(libs.getLibrary("androidx-lifecycle-viewmodelCompose"))
-            implementation(libs.getLibrary("androidx-lifecycle-viewmodelCompose"))
-
-            implementation(libs.getLibrary("koin-compose-viewmodel"))
-            implementation(libs.getLibrary("koin-compose"))
+        if (isFixture) {
+            commonMainProvider.configure {
+                dependencies {
+                    implementation(project(":core:annotations"))
+                    api(project(":core:test:support"))
+                }
+            }
         }
-        jvmMain.dependencies {
-            implementation(libs.getLibrary("compose-uiTooling"))
+    }
+
+    sourceSets {
+        val commonMainProvider = named("commonMain")
+        val isCore = project.path.startsWith(":core")
+
+        commonMainProvider.configure {
+            dependencies {
+                if (!isCore) {
+                    implementation(project(":core:design"))
+                }
+                implementation(project(":core:annotations"))
+
+                implementation(libs.getLibrary("compose-components-resources"))
+//                  implementation(libs.compose.material3.adaptive.layout)
+//                  implementation(libs.compose.material3.adaptive.navigation)
+                implementation(libs.getLibrary("compose-material3-adaptive-navigation-suite"))
+                implementation(libs.getLibrary("navigation-compose"))
+
+                implementation(libs.getLibrary("androidx-lifecycle-viewmodel"))
+                implementation(libs.getLibrary("androidx-lifecycle-runtimeCompose"))
+                implementation(libs.getLibrary("androidx-lifecycle-viewmodelCompose"))
+                implementation(libs.getLibrary("androidx-lifecycle-viewmodelCompose"))
+
+                implementation(libs.getLibrary("koin-compose-viewmodel"))
+                implementation(libs.getLibrary("koin-compose"))
+            }
+
+            jvmMain.dependencies {
+                implementation(libs.getLibrary("compose-uiTooling"))
+            }
         }
     }
 
@@ -64,4 +88,9 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
+}
+
+compose.resources {
+    publicResClass = true
+    generateResClass = auto
 }

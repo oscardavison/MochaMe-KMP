@@ -54,8 +54,8 @@ class FakeWebSocketEngine(
      */
     @InternalAPI
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
-        failureOnConnect?.let { throw it }
         handshakeRequests.send(data)
+        failureOnConnect?.let { throw it }
         connectGate?.await()
 
         val session = onConnect(data)

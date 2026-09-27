@@ -8,14 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mochame.core.design.AppLogo
 import com.mochame.utils.interfaces.MochaTimeUtils
 
 @Composable
@@ -32,17 +35,11 @@ fun DashboardScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        Text(
-            text = "MochaMe Dashboard",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = timeProvider.formatRelativeMochaDay(today),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        DashboardHeader(
+            relativeDate = timeProvider.formatRelativeMochaDay(today)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth()
@@ -54,7 +51,8 @@ fun DashboardScreen(
                 )
                 Text(
                     text = "Track sleep, morning readiness, and napping.",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -71,8 +69,34 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun DashboardHeader(
+    relativeDate: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
 
+        AppLogo(modifier = Modifier.size(46.dp))
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = "MochaMe",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                text = relativeDate,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

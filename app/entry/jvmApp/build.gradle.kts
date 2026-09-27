@@ -29,17 +29,37 @@ compose.desktop {
     application {
         mainClass = "com.mochame.app.entry.jvm.MainKt"
 
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("proguard-rules.pro"))
+            optimize = true
+        }
+
         nativeDistributions {
-            targetFormats(TargetFormat.Deb)
+            targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Exe)
             packageName = "MochaMe"
-            packageVersion = "1.0.0"
+            packageVersion = "0.1.0"
             description = "MochaMe Local-First"
             vendor = "MochaMe"
 
             linux {
                 shortcut = true
                 menuGroup = "Utility"
+                iconFile.set(project.file("src/jvmMain/resources/icons/icon.png"))
+                debMaintainer = "omdavison@proton.me"
+            }
+
+            windows {
+                shortcut = true
+                menuGroup = "MochaMe"
+                iconFile.set(project.file("src/jvmMain/resources/icons/icon.ico"))
+                dirChooser = true
+                perUserInstall = true
+                upgradeUuid = "6f8e7d21-9b34-4c56-8a12-123456789abc"
             }
         }
+    }
+
+    tasks.withType<JavaExec> {
+        systemProperty("dark.theme", System.getProperty("dark.theme") ?: "true")
     }
 }

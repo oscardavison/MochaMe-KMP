@@ -1,5 +1,6 @@
 package com.mochame.app.entry.jvm
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -20,11 +21,18 @@ fun main() {
             height = 768.dp
         )
 
+        val isDark = System.getProperty("dark.theme")?.toBooleanStrictOrNull() ?: true
+
         Window(
             onCloseRequest = {
-                koinApp.backgroundScope?.close()
-                stopKoin()
-                exitApplication()
+                try {
+                    koinApp.backgroundScope?.close()
+                    stopKoin()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    exitApplication()
+                }
             },
             state = windowState,
             title = "MochaMe"
@@ -33,7 +41,7 @@ fun main() {
                 window.minimumSize = Dimension(480, 560)
             }
 
-            MochaComposeAppShell()
+            MochaComposeAppShell(darkTheme = isDark)
         }
     }
 }

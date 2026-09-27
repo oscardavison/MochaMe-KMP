@@ -10,11 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -32,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mochame.core.design.AppLogo
 import com.mochame.utils.interfaces.MochaTimeUtils
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -71,7 +76,11 @@ fun DailyContextScreen(
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Loading context for day ${state.epochDay}...")
+            Text(
+                text = "Loading context...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         return
     }
@@ -95,19 +104,82 @@ fun DailyContextScreen(
                 .verticalScroll(scrollState)
                 .padding(24.dp)
         ) {
-            Text(
-                text = readableDate,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Row(
+                modifier = modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
 
-            Spacer(modifier = Modifier.height(24.dp))
+                AppLogo(modifier = Modifier.size(46.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = readableDate,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
 
             if (isWideLayout) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Biometrics",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            SleepInputField(
+                                value = state.sleepHoursInput,
+                                onIntent = onIntent,
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ReadinessInputField(
+                                value = state.readinessScoreInput,
+                                onIntent = onIntent,
+                                onDone = { focusManager.clearFocus() }
+                            )
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Recovery",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            NapSwitchField(state.isNapped, onIntent)
+                        }
+                    }
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Metrics & Recovery",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         SleepInputField(
                             value = state.sleepHoursInput,
                             onIntent = onIntent,
@@ -119,30 +191,18 @@ fun DailyContextScreen(
                             onIntent = onIntent,
                             onDone = { focusManager.clearFocus() }
                         )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         NapSwitchField(state.isNapped, onIntent)
                     }
                 }
-            } else {
-                SleepInputField(
-                    value = state.sleepHoursInput,
-                    onIntent = onIntent,
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ReadinessInputField(
-                    value = state.readinessScoreInput,
-                    onIntent = onIntent,
-                    onDone = { focusManager.clearFocus() }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                NapSwitchField(state.isNapped, onIntent)
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Button(
                     onClick = {
                         focusManager.clearFocus()
@@ -158,7 +218,10 @@ fun DailyContextScreen(
                         focusManager.clearFocus()
                         onIntent(DailyContextIntent.Delete)
                     },
-                    enabled = !state.isSaving
+                    enabled = !state.isSaving,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text("Delete Record")
                 }
@@ -185,8 +248,8 @@ private fun SleepInputField(
     OutlinedTextField(
         value = value,
         onValueChange = { onIntent(DailyContextIntent.UpdateSleepInput(it)) },
-        label = { Text("Sleep Hours (1 - 12)") },
-        placeholder = { Text("e.g. 7.5") },
+        label = { Text("Sleep Duration") },
+        placeholder = { Text("e.g. 7.5 hrs") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Next
@@ -206,8 +269,8 @@ private fun ReadinessInputField(
     OutlinedTextField(
         value = value,
         onValueChange = { onIntent(DailyContextIntent.UpdateReadinessInput(it)) },
-        label = { Text("Readiness Score (1 - 5)") },
-        placeholder = { Text("e.g. 4") },
+        label = { Text("Readiness Score") },
+        placeholder = { Text("1 - 5") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done
@@ -226,11 +289,17 @@ private fun NapSwitchField(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Napped Today", style = MaterialTheme.typography.titleMedium)
-            Text("Logged afternoon recovery nap", style = MaterialTheme.typography.bodySmall)
+            Text("Napped Today", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Logged afternoon recovery nap",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Switch(
             checked = isNapped,

@@ -52,7 +52,7 @@ internal class EngineHlcFactory(
 
             state = FactoryState(hydratedHlc, currentNodeId)
 
-            logger.d { "HLC successfully hydrated: $hydratedHlc" }
+            logger.i { "HLC successfully hydrated: $hydratedHlc" }
             hydratedHlc
         }
 
