@@ -40,7 +40,7 @@ internal class DefaultPayloadCodec(
 
             logger.d {
                 "Encoded complete wire payload: ${payload.size} intents -> ${bytes.size}B " +
-                        "(client schema v$version, payload blob ${encodedPayload.size}B)"
+                        "(schema v$version, payload blob ${encodedPayload.size}B)"
             }
 
             bytes
@@ -58,7 +58,7 @@ internal class DefaultPayloadCodec(
         val delta = try {
             ProtoBuf.decodeFromByteArray(VersionedPayload.serializer(), bytes)
         } catch (e: Exception) {
-            logger.e(e) { "Binary Corruption: Failed to decode outer VersionedPayload container (${bytes.size} bytes)" }
+            logger.e(e) { "Failed to decode outer VersionedPayload container (${bytes.size} bytes)" }
             throw e
         }
 

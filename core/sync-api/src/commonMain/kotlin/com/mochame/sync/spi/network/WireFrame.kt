@@ -9,10 +9,13 @@ import com.mochame.sync.common.writeLongAt
 sealed interface WireFrame {
     /** Indicates historical catch-up streaming is finished. */
     data object BackfillComplete : WireFrame
+
     /** Server acknowledgment confirming a committed client. */
     data class Ack(val batchId: Long, val watermark: Long) : WireFrame
+
     /** Broadcast delta from a remote peer. */
     data class Delta(val watermark: Long, val payload: ByteArray) : WireFrame
+
     /** Client intent received by the server. */
     data class ClientSubmit(val batchId: Long, val payload: ByteArray) : WireFrame
 }
@@ -76,27 +79,27 @@ object WireFrameFactory {
      * @throws IllegalStateException If the first byte does not match a known opcode.
      */
     fun unwrap(bytes: ByteArray): WireFrame {
-        require(bytes.isNotEmpty()) { "Malformed frame: Empty payload" }
+        require(bytes.isNotEmpty()) { "Frame header error: Empty payload" }
 
         return when (bytes[0]) {
             OP_BACKFILL_COMPLETE -> WireFrame.BackfillComplete
 
             OP_ACK -> {
-                require(bytes.size == 17) { "Malformed Ack frame: Expected 17 bytes, got ${bytes.size}" }
+                require(bytes.size == 17) { "Ack frame header error: Expected 17 bytes, got ${bytes.size}" }
                 val batchId = bytes.readLongAt(1)
                 val watermark = bytes.readLongAt(9)
                 WireFrame.Ack(batchId, watermark)
             }
 
             OP_DELTA -> {
-                require(bytes.size >= 9) { "Malformed Delta frame: Expected >= 9 bytes, got ${bytes.size}" }
+                require(bytes.size >= 9) { "Delta frame header error: Expected >= 9 bytes, got ${bytes.size}" }
                 val watermark = bytes.readLongAt(1)
                 val payload = bytes.copyOfRange(9, bytes.size)
                 WireFrame.Delta(watermark, payload)
             }
 
             OP_CLIENT_SUBMIT -> {
-                require(bytes.size >= 9) { "Malformed ClientSubmit frame: Expected >= 9 bytes, got ${bytes.size}" }
+                require(bytes.size >= 9) { "ClientSubmit frame header error: Expected >= 9 bytes, got ${bytes.size}" }
                 val batchId = bytes.readLongAt(1)
                 val payload = bytes.copyOfRange(9, bytes.size)
                 WireFrame.ClientSubmit(batchId, payload)

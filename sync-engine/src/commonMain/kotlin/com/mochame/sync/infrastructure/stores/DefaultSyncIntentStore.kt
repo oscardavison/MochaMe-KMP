@@ -30,7 +30,7 @@ import org.koin.core.annotation.Single
  */
 @Single(binds = [SyncIntentStore::class, SyncIntentMaintenanceStore::class])
 internal class DefaultSyncIntentStore(
-    private val intentDao: SyncIntentDao
+    private val intentDao: SyncIntentDao,
 ) : SyncIntentStore, SyncIntentMaintenanceStore {
 
     private val batchCounter = atomic(-1L)

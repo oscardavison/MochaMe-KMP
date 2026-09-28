@@ -113,32 +113,28 @@ internal class DefaultSyncCoordinator(
             return@launch
         }
 
+        logger.v { "Started outbound listener..." }
+
         workerHook.signals.collect {
             try {
-                logger.v { "Processing outbound client..." }
+                logger.v { "Processing outbound queue..." }
                 processQueueUntilExhausted()
             } catch (e: Exception) {
                 if (e is CancellationException || e is MochaException.Persistent) throw e
                 logger.e(e) {
-                    "Failure during outbound client processing: ${e.message}. " +
+                    "Failure during outbound processing: ${e.message}. " +
                             "Preserving outbound pipeline state."
                 }
             }
         }
     }
 
-    /**
-     * Intended behavior should ensure regular batches are made when feature repositories
-     * perform local changes, these batches being small. The UI design must be considered
-     * in relation to this behavior, as it will directly relate to how repositories trigger
-     * invalidation and the client process.
-     */
     @OptIn(FlowPreview::class)
     override suspend fun processQueueUntilExhausted() {
         coordinatorMutex.withLock {
 
             if (!syncTransport.isConnected) {
-                logger.v { "Outbound: Transport disconnected. Skipping queue processing." }
+                logger.v { "Outbound: Transport not connected. Skipping queue processing." }
                 return
             }
 
@@ -174,7 +170,7 @@ internal class DefaultSyncCoordinator(
     }
 
     override suspend fun handleInboundBytes(watermark: Long, inbound: ByteArray) {
-        logger.v { "Inbound: Received client with ${inbound.size}B..." }
+        logger.v { "Inbound: Received payload with ${inbound.size}B..." }
 
         try {
             bootManager.awaitReady()
@@ -316,7 +312,7 @@ internal class DefaultSyncCoordinator(
         when (e) {
             is TimeoutCancellationException,
             is MochaException.Transient.NetworkDisconnect -> {
-                logger.w { "Outbound: ACK terminating for client $batchId (${e::class.simpleName})" }
+                logger.w { "Outbound: ACK terminating for $batchId (${e::class.simpleName})" }
                 intentStore.releaseIntents(batchId)
                 false
             }
@@ -402,7 +398,7 @@ internal class DefaultSyncCoordinator(
             e.message ?: "Codec decode failure"
         }
 
-        logger.e(e) { "Inbound [watermark-$watermark]: Parsing failure during client processing (${inbound.size}B). $failureReason" }
+        logger.e(e) { "Inbound [watermark-$watermark]: Parsing failure during processing (${inbound.size}B). $failureReason" }
 
         transactor.runImmediateTransaction {
             quarantinedPayloadStore.record(

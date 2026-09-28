@@ -344,9 +344,11 @@ internal class ClientWebSocketTransport(
      * the session immediately for debugging, and to allow reconnection to trigger a backfill and retry.
      */
     private suspend fun dispatchWireFrame(bytes: ByteArray) {
-        when (val wireFrame = WireFrameFactory.unwrap(bytes)) {
+        logger.v { "${bytes.size}B" }
+        val wireFrame = WireFrameFactory.unwrap(bytes)
+        when (wireFrame) {
             is WireFrame.BackfillComplete -> {
-                logger.i { "Backfill complete. Triggering outbound pipeline flush." }
+                logger.i { "Backfill complete. Triggering outbound pipeline flush..." }
                 transportScope.launch(CoroutineName("OnConnectedFlush")) {
                     onConnectedListener?.invoke()
                 }

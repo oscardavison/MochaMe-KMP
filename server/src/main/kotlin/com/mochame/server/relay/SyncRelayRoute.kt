@@ -1,9 +1,9 @@
 package com.mochame.server.relay
 
 import co.touchlab.kermit.Logger
-import com.mochame.server.utils.ServerConfig
 import com.mochame.server.database.ServerDatabase
-import com.mochame.sync.common.readLongAt
+import com.mochame.server.utils.ServerConfig
+import com.mochame.sync.spi.network.WireFrame
 import com.mochame.sync.spi.network.WireFrameFactory
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -18,7 +18,6 @@ import io.ktor.websocket.CloseReason
 import io.ktor.websocket.CloseReason.Codes.INTERNAL_ERROR
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
-import io.ktor.websocket.readBytes
 import kotlinx.coroutines.yield
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
@@ -207,7 +206,7 @@ private suspend fun streamBackfill(
 
 /**
  * Loops over incoming WebSocket frames, validates header layouts, and enqueues intents
- * to the centralized [DatabaseActor].
+ * to the [DatabaseActor].
  */
 private suspend fun DefaultWebSocketServerSession.consumeInboundStream(
     sessionHandle: SessionHandle,
@@ -217,9 +216,10 @@ private suspend fun DefaultWebSocketServerSession.consumeInboundStream(
     for (frame in incoming) {
         if (frame !is Frame.Binary) continue
 
-        val rawPayload = frame.readBytes()
-        if (rawPayload.size < 9) {
-            logger.w { "Malformed frame from '${sessionHandle.nodeId}' (${rawPayload.size}b). Discarding." }
+        val wireBytes = frame.data
+
+        if (wireBytes.size < 9) {
+            logger.w { "Header metadata unparsable on frame from '${sessionHandle.nodeId}' (${wireBytes.size}b). Discarding." }
             sessionHandle.close(
                 CloseReason.Codes.PROTOCOL_ERROR,
                 "Expected >= 9 Bytes [0x04][batchId: 8B]"
@@ -227,13 +227,20 @@ private suspend fun DefaultWebSocketServerSession.consumeInboundStream(
             continue
         }
 
-        val batchId = rawPayload.readLongAt(1)
+        val clientSubmission = try {
+            WireFrameFactory.unwrap(wireBytes) as WireFrame.ClientSubmit
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.w(e) { "Invalid frame from '${sessionHandle.nodeId}' (${wireBytes.size}b): ${e.message}. Discarding." }
+            continue
+        }
 
         val intent = DeltaWriteIntent(
             groupId = sessionHandle.groupId,
             originNodeId = sessionHandle.nodeId,
-            batchId = batchId,
-            rawPayload = rawPayload,
+            batchId = clientSubmission.batchId,
+            rawPayload = clientSubmission.payload,
             senderHandle = sessionHandle
         )
 

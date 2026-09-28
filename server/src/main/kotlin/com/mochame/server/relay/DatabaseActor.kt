@@ -24,7 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * @property groupId Group partition.
  * @property originNodeId Originating peer identifier.
- * @property batchId Client client identifier for ACK response. Not persisted server side.
+ * @property batchId Client identifier for ACK response. Not persisted server side.
  * @property rawPayload Serialized delta content to persist and broadcast.
  * @property senderHandle Active session handle used to route writes to outbound channels, and call teardowns.
  */
@@ -107,6 +107,8 @@ class DatabaseActor(
     }
 
     private fun dispatchCommittedBatch(batch: List<DeltaWriteIntent>, watermarks: List<Long>) {
+        logger.d { formatBatchDispatchTable(batch, watermarks) }
+
         for (i in batch.indices) {
             val intent = batch[i]
             val watermark = watermarks[i]
@@ -141,16 +143,13 @@ class DatabaseActor(
     }
 
     private fun broadcastDelta(intent: DeltaWriteIntent, watermark: Long) {
-        val broadcastFrame = Frame.Binary(
-            fin = true,
-            data = WireFrameFactory.delta(watermark, intent.rawPayload)
-        )
+        val deltaBytes = WireFrameFactory.delta(watermark, intent.rawPayload)
 
         relayManager.broadcast(
             groupId = intent.groupId,
             excludeNodeId = intent.originNodeId,
             watermark = watermark,
-            frame = broadcastFrame
+            data = deltaBytes
         )
     }
 
@@ -172,5 +171,30 @@ class DatabaseActor(
                 reason = failureReason
             )
         }
+    }
+
+    private fun formatBatchDispatchTable(
+        batch: List<DeltaWriteIntent>,
+        watermarks: List<Long>
+    ): String = buildString(
+        capacity = 300 + batch.size * 120
+    ) {
+        appendLine()
+        appendLine("┌──────┬──────────────┬──────────────────────┬──────────────────────┬──────────┐")
+        appendLine("│ Idx  │ Watermark    │ Batch ID             │ Origin Node          │ Payload  │")
+        appendLine("├──────┼──────────────┼──────────────────────┼──────────────────────┼──────────┤")
+        for (i in batch.indices) {
+            val intent = batch[i]
+            val wm = watermarks.getOrNull(i)?.toString() ?: "N/A"
+
+            val idxStr = i.toString().padEnd(4)
+            val wmStr = wm.padEnd(12)
+            val batchIdStr = intent.batchId.toString().padEnd(20)
+            val nodeStr = intent.originNodeId.take(20).padEnd(20)
+            val payloadSize = "${intent.rawPayload.size}b".padEnd(8)
+
+            appendLine("│ $idxStr │ $wmStr │ $batchIdStr │ $nodeStr │ $payloadSize │")
+        }
+        append("└──────┴──────────────┴──────────────────────┴──────────────────────┴──────────┘")
     }
 }

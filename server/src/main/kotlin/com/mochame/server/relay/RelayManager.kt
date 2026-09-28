@@ -64,11 +64,12 @@ class RelayManager(
      * is at capacity, the attempt fails fast and the peer is terminated with
      * [CloseReason.Codes.TRY_AGAIN_LATER].
      */
-    fun broadcast(groupId: String, excludeNodeId: String, watermark: Long, frame: Frame) {
+    fun broadcast(groupId: String, excludeNodeId: String, watermark: Long, data: ByteArray) {
         val peers = groupSessions[groupId]?.values ?: return
 
         for (peer in peers) {
             if (peer.nodeId == excludeNodeId) continue
+            val frame = Frame.Binary(fin = true, data = data)
 
             when (val result = peer.enqueueBroadcast(watermark, frame)) {
                 EnqueueResult.Success -> {}

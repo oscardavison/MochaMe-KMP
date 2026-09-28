@@ -141,12 +141,12 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
             realBatchCodec.encode(emptyIntents)
         }
 
-        assertEquals(exception.message?.contains("Cannot serialise an empty client"), true)
+        assertEquals(exception.message?.contains("Cannot serialise an empty payload"), true)
     }
 
     @Test
     fun should_return_empty_list_when_decoding_valid_batch_payload_with_zero_envelopes() = runEnv {
-        // Arrange: Encode a single intent, then decode a manually encoded zero-envelope client payload
+        // Arrange: Encode a single intent, then decode a manually encoded zero-envelope  payload
         val emptyBatchWirePayload = SyncBatchPayloadV1(
             envelopes = emptyList(),
             intentSchemaVersion = 1
@@ -205,7 +205,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
         val decodedList = realBatchCodec.decode(batchBytes)
 
         // Assert: Corrupted middle envelope dropped, surviving valid envelopes preserved
-        assertEquals(2, decodedList.size, "Decoded client must contain exactly 2 surviving intents")
+        assertEquals(2, decodedList.size, "Decoded payload must contain exactly 2 surviving intents")
 
         assertEquals(1L, decodedList[0].candidateKey)
         assertEquals(intent1.hlc, decodedList[0].hlc)
@@ -244,7 +244,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
 
     @Test
     fun should_return_empty_list_when_all_envelopes_in_batch_are_corrupted() = runEnv {
-        // Arrange: All envelopes in client are garbage bytes
+        // Arrange: All envelopes in payload are garbage bytes
         val garbageEnvelopes = listOf(
             byteArrayOf(0x12, 0x34),
             byteArrayOf(0x56, 0x78),
@@ -276,7 +276,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
     @Test
     fun should_return_empty_list_and_abort_loop_when_batch_header_specifies_unregistered_schema_version() =
         runEnv {
-            // Arrange: Valid intent bytes, but client header specifies intentSchemaVersion = 99
+            // Arrange: Valid intent bytes, but payload header specifies intentSchemaVersion = 99
             val validIntents = List(3) { createTestSyncIntent() }
             val validBytes = validIntents.map { intentRouter.routedEncode(it) }
 

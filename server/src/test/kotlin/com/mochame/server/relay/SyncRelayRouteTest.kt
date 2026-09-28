@@ -251,7 +251,7 @@ class SyncRelayRouteTest : FunSpec({
         withRelayClient { client ->
             client.webSocket("/sync/$groupId/$nodeId?since=0") {
                 val fenceFrame = incoming.receive().shouldBeInstanceOf<Frame.Binary>()
-                fenceFrame.readBytes() shouldBe WireFrameFactory.backfillComplete()
+                fenceFrame.data shouldBe WireFrameFactory.backfillComplete()
 
                 val truncatedPayload = byteArrayOf(0x04, 0x00, 0x00, 0x00, 0x01)
                 outgoing.send(Frame.Binary(fin = true, data = truncatedPayload))
@@ -274,7 +274,7 @@ class SyncRelayRouteTest : FunSpec({
         val payloadData = "binary donut".encodeToByteArray()
 
         // Given
-        val frameBytes = WireFrameFactory.client(expectedBatchId, payloadData)
+        val clientBytes = WireFrameFactory.client(expectedBatchId, payloadData)
 
         withRelayClient { client ->
             client.webSocket("/sync/$groupId/$nodeId?since=0") {
@@ -282,11 +282,10 @@ class SyncRelayRouteTest : FunSpec({
                 fenceFrame.readBytes() shouldBe WireFrameFactory.backfillComplete()
 
                 // When
-                outgoing.send(Frame.Binary(fin = true, data = frameBytes))
+                outgoing.send(Frame.Binary(fin = true, data = clientBytes))
 
                 // Then: Client receives ACK frame [0x02: Opcode (1B)][batchId: 8B][watermark: 8B] (17 Bytes)
-                val ackFrame =
-                    WireFrameFactory.unwrap(incoming.receive().data)
+                val ackFrame = WireFrameFactory.unwrap(incoming.receive().data)
                         .shouldBeInstanceOf<WireFrame.Ack>()
                 ackFrame.batchId shouldBe expectedBatchId
                 ackFrame.watermark shouldBe beGreaterThan(0L)
@@ -299,7 +298,7 @@ class SyncRelayRouteTest : FunSpec({
                 )
                 stored.size shouldBe 1
                 stored.first().watermark shouldBe ackFrame.watermark
-                stored.first().payload shouldBe frameBytes
+                stored.first().payload shouldBe payloadData
 
                 close(CloseReason(CloseReason.Codes.NORMAL, "Test completed"))
             }

@@ -25,8 +25,8 @@ fun main() {
     )
 
     Runtime.getRuntime().addShutdownHook(Thread {
-        logger.i { "Shutdown signal received. Closing Sync Relay Server..." }
         server.close()
+        logger.i { "Shutdown signal received. Closed Sync Relay Server." }
     })
 
     logger.i { "Starting Relay Server on ${ServerConfig.host}:${ServerConfig.port} (DB: $resolvedDbPath)" }

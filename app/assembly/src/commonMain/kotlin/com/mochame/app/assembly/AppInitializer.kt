@@ -80,8 +80,8 @@ internal class DefaultAppInitializer(
         try {
             logger.i { "Initializing application..." }
 
-            janitor.startupChecks().join()
-            delay(3.seconds) // so i get to see wheel spin :)
+            janitor.startupChecks().join() // timeout?
+            delay(3.seconds) // so i get to see wheel spin
 
             bootUpdater.updateState(BootState.Ready)
             logger.i { "Application initialized successfully..." }
@@ -93,6 +93,8 @@ internal class DefaultAppInitializer(
                 port = connectionEndPoint.serverPort,
                 groupId = connectionEndPoint.syncGroupId,
             )
+
+            coordinator.startOutboundListener()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -112,7 +114,6 @@ internal class DefaultAppInitializer(
 
         transport.setOnConnectedListener {
             coordinator.processQueueUntilExhausted()
-            coordinator.startOutboundListener()
         }
 
         transport.setOnDisconnectedListener {
