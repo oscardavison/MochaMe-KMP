@@ -19,3 +19,11 @@ captures
 node_modules/
 .antigravitycli
 docs/code-review
+
+/server-data/
+*.db
+*.db-wal
+*.db-shm
+
+.antigravitycli/
+.understand-anything/

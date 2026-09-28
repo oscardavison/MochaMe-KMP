@@ -14,11 +14,13 @@ expect class PlatformTagModule
 class LoggerModule {
 
     @Single
-    fun getLogger(@PlatformTag platformTag: String) : Logger = Logger(
-        config = StaticConfig(
-            minSeverity = Severity.Verbose,
-            logWriterList = listOf(MochaLogWriter(minSeverity = Severity.Verbose))
-        ),
-        tag = platformTag
-    )
+    fun getLogger(@PlatformTag platformTag: String, minSeverity: Severity? = null): Logger {
+        return Logger(
+            config = StaticConfig(
+                minSeverity = minSeverity ?: Severity.Verbose,
+                logWriterList = listOf(MochaLogWriter(minSeverity = Severity.Verbose))
+            ),
+            tag = platformTag
+        )
+    }
 }

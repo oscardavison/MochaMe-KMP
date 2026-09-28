@@ -16,6 +16,9 @@ kotlin {
 
             implementation(project(":feature:bio"))
             implementation(project(":feature:bio:ui"))
+
+            implementation(libs.material.icons.extended)
+            implementation(libs.kotlinx.datetime)
         }
     }
 }

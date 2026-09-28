@@ -13,6 +13,7 @@ import kotlin.time.Clock
  * Idea is for this to act as a persistence record of a mutation's lifecycle.
  */
 @Entity(
+    tableName = "sync_intent",
     indices = [
         Index(value = ["syncStatus", "batchId", "hlc"]),
         Index(value = ["batchId", "syncStatus"]),

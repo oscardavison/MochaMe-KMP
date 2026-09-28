@@ -55,13 +55,14 @@ kotlin {
         commonMainProvider.configure {
             dependencies {
                 if (!isCore) {
-                    implementation(project(":core:design"))
+                    api(project(":core:design"))
                 }
                 implementation(project(":core:annotations"))
 
-                implementation(libs.getLibrary("compose-components-resources"))
+                api(libs.getLibrary("compose-components-resources"))
 //                  implementation(libs.compose.material3.adaptive.layout)
 //                  implementation(libs.compose.material3.adaptive.navigation)
+                implementation(libs.getLibrary("compose-material3"))
                 implementation(libs.getLibrary("compose-material3-adaptive-navigation-suite"))
                 implementation(libs.getLibrary("navigation-compose"))
 

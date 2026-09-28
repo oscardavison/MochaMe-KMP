@@ -80,8 +80,8 @@ internal class DefaultAppInitializer(
         try {
             logger.i { "Initializing application..." }
 
-            janitor.startupChecks().join() // timeout?
-            delay(3.seconds) // so i get to see wheel spin
+            janitor.startupChecks().join()
+            delay(1.5.seconds) // so i get to see wheel spin
 
             bootUpdater.updateState(BootState.Ready)
             logger.i { "Application initialized successfully..." }

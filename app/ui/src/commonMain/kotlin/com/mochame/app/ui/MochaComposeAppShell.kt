@@ -2,11 +2,13 @@ package com.mochame.app.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -53,7 +55,9 @@ fun MochaComposeAppShell(
                                         launchSingleTop = true
                                     }
                                 },
-                                icon = { Text(item.iconText) },
+                                icon = { item.RenderIcon(item.isSelected(currentDestination)) },
+                                label = { Text(item.label) },
+                                modifier = modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                             )
                         }
                     },

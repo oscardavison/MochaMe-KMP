@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mochame.core.design.AppLogo
+import com.mochame.core.design.MochaHeader
 import com.mochame.utils.interfaces.MochaTimeUtils
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -94,6 +96,7 @@ fun DailyContextScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
+            .safeDrawingPadding()
             .imePadding()
     ) {
         val isWideLayout = maxWidth >= 600.dp
@@ -102,26 +105,9 @@ fun DailyContextScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(24.dp)
+                .padding(16.dp)
         ) {
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-                AppLogo(modifier = Modifier.size(46.dp))
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = readableDate,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            MochaHeader(subtitle = readableDate)
 
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -137,7 +123,7 @@ fun DailyContextScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Biometrics",
+                                text = "Metrics",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(16.dp))
@@ -176,7 +162,7 @@ fun DailyContextScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Metrics & Recovery",
+                            text = "Metrics",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -296,7 +282,7 @@ private fun NapSwitchField(
         Column(modifier = Modifier.weight(1f)) {
             Text("Napped Today", style = MaterialTheme.typography.titleSmall)
             Text(
-                "Logged afternoon recovery nap",
+                text = if (isNapped) "Logged for today" else "Log for today",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

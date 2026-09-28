@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.bundles.ktor.server)
     implementation(libs.sqlite.jdbc)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.slf4j.nop)
 
     testImplementation(project(":core:test:fixtures-utils"))
     testImplementation(libs.kotest.runner.junit5)

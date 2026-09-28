@@ -127,7 +127,7 @@ fun Route.syncRelayRoute(
             logger.e(e) { "Session error for node '$nodeId' in group '$groupId':${e.message}" }
             relayManager.terminate(sessionHandle, INTERNAL_ERROR, e.message ?: "Unhandled error")
         } finally {
-            relayManager.terminate(sessionHandle, CloseReason.Codes.NORMAL, "Client closed connection")
+            relayManager.terminate(sessionHandle, CloseReason.Codes.NORMAL, "Closed connection")
         }
     }
 }

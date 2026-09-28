@@ -85,8 +85,13 @@ class RelayServer(
      * 4. Closes the underlying [database] connection pool.
      */
     override fun close() {
-        serverScope.cancel()
-        engine?.stop(gracePeriodMillis = 1000, timeoutMillis = 3000)
-        database.close()
+        try {
+            serverScope.cancel()
+            engine?.stop(gracePeriodMillis = 1000, timeoutMillis = 3000)
+            database.close()
+        } catch (e: Exception) {
+            logger.e { "Error during shutdown: ${e.message}" }
+            throw e
+        }
     }
 }

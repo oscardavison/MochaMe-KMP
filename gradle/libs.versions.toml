@@ -32,6 +32,7 @@ materialVersion = "1.14.0"
 mokkery = "3.4.2"
 atomicfu = "0.33.0"
 room = "2.8.5"
+slf4jNop = "2.0.20"
 sqlite = "2.7.1"
 datetime = "0.8.0"
 serialization = "1.11.0"
@@ -69,8 +70,8 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", v
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatform" }
 compose-material3-adaptive-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "composeMultiplatform" }
+material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 
-hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 koin-compose-viewmodel-navigation = { module = "io.insert-koin:koin-compose-viewmodel-navigation", version.ref = "koin" }
 
@@ -121,17 +122,18 @@ kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kermit-test = { module = "co.touchlab:kermit-test", version.ref = "kermit" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
 material-v1120 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4jNop" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
 uuid = { module = "com.benasher44:uuid", version.ref = "uuid" }
 work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 
 # Navigation 3
 jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "multiplatform-nav3-ui" }

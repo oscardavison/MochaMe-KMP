@@ -23,7 +23,7 @@ interface MochaTimeUtils : TimeUtils {
     /**
      * Converts a Mocha epoch day into a clean human-readable date ("Mon, Aug 31, 2026").
      */
-    fun formatMochaDay(epochDay: Long): String
+    fun formatStandardDay(epochDay: Long): String
 
     /**
      * Converts an Instant to its corresponding Mocha day and returns the formatted label.

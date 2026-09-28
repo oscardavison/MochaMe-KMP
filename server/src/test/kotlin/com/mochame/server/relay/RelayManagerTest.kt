@@ -2,6 +2,7 @@ package com.mochame.server.relay
 
 import com.mochame.server.utils.FakeWebSocketSession
 import com.mochame.server.utils.ServerConfig
+import com.mochame.utils.fixtures.TestPayloads
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.engine.coroutines.backgroundScope
 import io.kotest.engine.coroutines.testScheduler
@@ -63,7 +64,7 @@ class RelayManagerTest : FunSpec({
             groupId = "group-1",
             excludeNodeId = "",
             watermark = 10L,
-            frame = Frame.Text("A")
+            data = TestPayloads.DEFAULT
         )
 
         // Then: Group 2's handle and state remain intact and untouched
@@ -248,7 +249,7 @@ class RelayManagerTest : FunSpec({
                 groupId = "group-1",
                 excludeNodeId = "node-1",
                 watermark = 100L,
-                frame = Frame.Text("broadcast-payload")
+                data = TestPayloads.DEFAULT
             )
             testScheduler.runCurrent()
 
@@ -258,11 +259,11 @@ class RelayManagerTest : FunSpec({
             // And: Peers node-2 and node-3 receive the broadcast frame
             val sent2 = fakeSession2.drainSentFrames()
             sent2 shouldHaveSize 1
-            sent2[0].shouldBeInstanceOf<Frame.Text>().readText() shouldBe "broadcast-payload"
+            sent2[0].data shouldBe TestPayloads.DEFAULT
 
             val sent3 = fakeSession3.drainSentFrames()
             sent3 shouldHaveSize 1
-            sent3[0].shouldBeInstanceOf<Frame.Text>().readText() shouldBe "broadcast-payload"
+            sent3[0].data shouldBe TestPayloads.DEFAULT
         }
 
         test("should return silently without errors when broadcasting to non-existent groupId") {
@@ -275,7 +276,7 @@ class RelayManagerTest : FunSpec({
                 groupId = "ghost-group",
                 excludeNodeId = "",
                 watermark = 10L,
-                frame = Frame.Text("noop")
+                data = TestPayloads.DEFAULT
             )
         }
     }
@@ -323,7 +324,7 @@ class RelayManagerTest : FunSpec({
             groupId = "group-1",
             excludeNodeId = "",
             watermark = 3L,
-            frame = Frame.Text("coffee?")
+            data = TestPayloads.DEFAULT
         )
 
         gate.complete(Unit)
@@ -344,7 +345,7 @@ class RelayManagerTest : FunSpec({
         fastPeer.outboundChannel.isClosedForSend shouldBe false
         fastPeer.session.outgoing.isClosedForSend shouldBe false
         val emittedFrames = fastSession.drainSentFrames()
-        emittedFrames.first().shouldBeInstanceOf<Frame.Text>().readText() shouldBe "coffee?"
+        emittedFrames.first().data shouldBe TestPayloads.DEFAULT
     }
 
     test("should evict peer and terminate with TRY_AGAIN_LATER on EnqueueResult.StagingSaturated") {
@@ -372,7 +373,7 @@ class RelayManagerTest : FunSpec({
             groupId = "group-1",
             excludeNodeId = "",
             watermark = 3L,
-            frame = Frame.Text("staging-overflow")
+            data = TestPayloads.DEFAULT
         )
 
         // Then: Peer is evicted from the registry
@@ -410,7 +411,7 @@ class RelayManagerTest : FunSpec({
             groupId = "group-1",
             excludeNodeId = "",
             watermark = 10L,
-            frame = Frame.Text("ping")
+            data = TestPayloads.DEFAULT
         )
 
         // Then: Peer is evicted from the active registry
@@ -568,7 +569,7 @@ class RelayManagerTest : FunSpec({
                     groupId = "group-1",
                     excludeNodeId = "actor-node",
                     watermark = w,
-                    frame = Frame.Text("w-$w")
+                    data = TestPayloads.DEFAULT
                 )
             }
         }

@@ -41,7 +41,7 @@ actual class InternalPlatformModule : KoinComponent {
         return object : AppPathsProvider {
             override val blobPending = "$baseDir/blobs/pending"
             override val blobCommitted = "$baseDir/blobs/committed"
-            override val databasePath = "$baseDir/mocha_native.db"
+            override val databasePath = "$baseDir/native_mochame.db"
         }
     }
 

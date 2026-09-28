@@ -27,9 +27,6 @@ data class StoredDelta(
     val payload: ByteArray
 )
 
-val dbPath: String = "${System.getProperty("user.home")}/.mochame/sync_server.db"
-
-
 /**
  * Embedded SQLite storage layer for change-log delta persistence and catch-up queries.
  *
@@ -43,7 +40,7 @@ val dbPath: String = "${System.getProperty("user.home")}/.mochame/sync_server.db
  * Total off-heap native cache ceiling: `(1 * 2MB) + ((cores * 2) * 4MB)`.
  */
 class ServerDatabase(
-    path: String = dbPath,
+    path: String,
     private val clock: TimeUtils,
     private val config: ServerConfig = ServerConfig.Default,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO

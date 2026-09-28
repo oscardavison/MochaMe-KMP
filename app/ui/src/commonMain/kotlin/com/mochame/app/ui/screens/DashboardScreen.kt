@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -19,7 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.mochame.core.design.AppLogo
+import com.mochame.core.design.MochaHeader
 import com.mochame.utils.interfaces.MochaTimeUtils
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 @Composable
 fun DashboardScreen(
@@ -27,16 +32,19 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     timeProvider: MochaTimeUtils
 ) {
-    val today = timeProvider.getMochaDay()
-    val yesterday = today - 1
+    val todayEpochDay: Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
+    val yesterday: Long = todayEpochDay - 1L
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .safeDrawingPadding()
+            .padding(16.dp)
     ) {
-        DashboardHeader(
-            relativeDate = timeProvider.formatRelativeMochaDay(today)
+
+        MochaHeader(
+            title = "MochaMe",
+            subtitle = timeProvider.formatRelativeMochaDay(todayEpochDay)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -60,7 +68,7 @@ fun DashboardScreen(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(onClick = { onNavigateToBio(today) }) {
+                    Button(onClick = { onNavigateToBio(todayEpochDay) }) {
                         Text("Log Today")
                     }
                     OutlinedButton(onClick = { onNavigateToBio(yesterday) }) {

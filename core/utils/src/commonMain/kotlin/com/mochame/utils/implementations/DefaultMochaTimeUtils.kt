@@ -43,14 +43,14 @@ open class DefaultMochaTimeUtils(
             .toEpochMilliseconds()
     }
 
-    override fun formatMochaDay(epochDay: Long): String {
+    override fun formatStandardDay(epochDay: Long): String {
         val date = LocalDate.fromEpochDays(epochDay)
-        return date.format(MochaHeaderDateFormat)
+        return date.format(HeaderDateFormat)
     }
 
     override fun formatMochaDay(instant: Instant, timeZone: TimeZone): String {
         val epochDay = calculateMochaEpochDay(instant, timeZone)
-        return formatMochaDay(epochDay)
+        return formatStandardDay(epochDay)
     }
 
     override fun formatRelativeMochaDay(epochDay: Long): String {
@@ -62,12 +62,12 @@ open class DefaultMochaTimeUtils(
             today -> "Today • $shortDate"
             today - 1L -> "Yesterday • $shortDate"
             today + 1L -> "Tomorrow • $shortDate"
-            else -> formatMochaDay(epochDay)
+            else -> formatStandardDay(epochDay)
         }
     }
 }
 
-private val MochaHeaderDateFormat = LocalDate.Format {
+private val HeaderDateFormat = LocalDate.Format {
     dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
     chars(", ")
     monthName(MonthNames.ENGLISH_ABBREVIATED)

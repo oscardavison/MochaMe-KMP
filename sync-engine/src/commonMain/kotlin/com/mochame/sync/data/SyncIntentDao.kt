@@ -35,7 +35,7 @@ interface SyncIntentDao {
      */
     @Query(
         """
-        SELECT * FROM SyncIntentEntity 
+        SELECT * FROM sync_intent 
         WHERE candidateKey = :candidateKey 
         AND syncStatus = :status 
         LIMIT 1
@@ -48,7 +48,7 @@ interface SyncIntentDao {
 
     @Query(
         """
-        SELECT * FROM SyncIntentEntity
+        SELECT * FROM sync_intent
         WHERE featureContext = :featureContextName
         AND syncStatus = :status
     """
@@ -58,7 +58,7 @@ interface SyncIntentDao {
         status: SyncStatus = SyncStatus.PENDING
     ): List<SyncIntentEntity>
 
-    @Query("SELECT MAX(batchId) FROM SyncIntentEntity")
+    @Query("SELECT MAX(batchId) FROM sync_intent")
     suspend fun getMaxBatchId(): Long?
 
     /**
@@ -74,24 +74,24 @@ interface SyncIntentDao {
      */
     @Query(
         """
-    UPDATE SyncIntentEntity 
+    UPDATE sync_intent 
     SET batchId = :id, 
         syncStatus = :syncingStatus, 
         leasedAt = :leasedAt
     WHERE hlc IN (
         SELECT candidate.hlc 
-        FROM SyncIntentEntity candidate
+        FROM sync_intent candidate
         WHERE candidate.batchId IS NULL 
           AND candidate.syncStatus = :pendingStatus
           
           AND NOT EXISTS (
-              SELECT 1 FROM SyncIntentEntity q
+              SELECT 1 FROM sync_intent q
               WHERE q.candidateKey = candidate.candidateKey
                 AND q.syncStatus = :quarantinedStatus
           )
           
           AND NOT EXISTS (
-              SELECT 1 FROM SyncIntentEntity prior
+              SELECT 1 FROM sync_intent prior
               WHERE prior.candidateKey = candidate.candidateKey
                 AND prior.hlc < candidate.hlc
                 AND prior.syncStatus != :successStatus
@@ -112,7 +112,7 @@ interface SyncIntentDao {
         successStatus: SyncStatus = SyncStatus.SUCCESS
     ): Int
 
-    @Query("SELECT * FROM SyncIntentEntity WHERE batchId = :id ORDER BY hlc ASC")
+    @Query("SELECT * FROM sync_intent WHERE batchId = :id ORDER BY hlc ASC")
     suspend fun getClaimedBatch(id: Long): List<SyncIntentEntity>
 
     @Transaction
@@ -130,7 +130,7 @@ interface SyncIntentDao {
 
     @Query(
         """
-            UPDATE SyncIntentEntity 
+            UPDATE sync_intent 
             SET syncStatus = :status
             WHERE batchId = :batchId 
               AND syncStatus = :expectedCurrentStatus
@@ -144,7 +144,7 @@ interface SyncIntentDao {
 
     @Query(
         """
-        UPDATE SyncIntentEntity
+        UPDATE sync_intent
         SET lastErrorMessage = :message
         WHERE batchId = :batchId
     """
@@ -153,7 +153,7 @@ interface SyncIntentDao {
 
     @Query(
         """
-    UPDATE SyncIntentEntity
+    UPDATE sync_intent
     SET syncStatus = :quarantineStatus,
         lastErrorMessage = :errorMessage
     WHERE hlc = :hlc AND candidateKey = :candidateKey
@@ -168,7 +168,7 @@ interface SyncIntentDao {
 
     @Query(
     """
-    UPDATE SyncIntentEntity
+    UPDATE sync_intent
     SET syncStatus = :pendingStatus,
         batchId = NULL,
         leasedAt = NULL
@@ -182,7 +182,7 @@ interface SyncIntentDao {
 
     @Query(
     """
-        UPDATE SyncIntentEntity
+        UPDATE sync_intent
         SET syncStatus = :pendingStatus,
             batchId = NULL,
             leasedAt = NULL
@@ -196,12 +196,12 @@ interface SyncIntentDao {
     ): Int
 
     // ----- CLEAN UP (Janitor Support) ------
-    @Query("SELECT EXISTS(SELECT 1 FROM SyncIntentEntity WHERE overflowBlobId = :blobId)")
+    @Query("SELECT EXISTS(SELECT 1 FROM sync_intent WHERE overflowBlobId = :blobId)")
     suspend fun existsForBlobId(blobId: String): Boolean
 
     @Query(
         """
-    UPDATE SyncIntentEntity
+    UPDATE sync_intent
     SET retryCount = retryCount + 1,
         syncStatus = :quarantineStatus
     WHERE batchId IS NOT NULL 
@@ -219,13 +219,13 @@ interface SyncIntentDao {
 
     @Query(
         """
-    UPDATE SyncIntentEntity
+    UPDATE sync_intent
     SET syncStatus = :quarantineStatus,
         lastErrorMessage = 'Cascaded quarantine: causal predecessor failed on candidateKey'
     WHERE syncStatus = :pendingStatus
       AND candidateKey IN (
           SELECT DISTINCT candidateKey 
-          FROM SyncIntentEntity 
+          FROM sync_intent 
           WHERE syncStatus = :quarantineStatus
       )
     """
@@ -237,7 +237,7 @@ interface SyncIntentDao {
 
     @Query(
         """
-    UPDATE SyncIntentEntity
+    UPDATE sync_intent
     SET retryCount = retryCount + (:shouldIncrementRetry),
         syncStatus = :resetStatus,
         batchId = NULL,
@@ -259,7 +259,7 @@ interface SyncIntentDao {
     @Query(
         """
         SELECT featureContext, COUNT(*) AS count
-        FROM SyncIntentEntity
+        FROM sync_intent
         WHERE syncStatus = :quarantinedStatus 
         GROUP BY featureContext
     """
@@ -268,9 +268,9 @@ interface SyncIntentDao {
 
     @Query(
         """
-    DELETE FROM SyncIntentEntity 
+    DELETE FROM sync_intent 
         WHERE hlc IN (
-            SELECT hlc FROM SyncIntentEntity
+            SELECT hlc FROM sync_intent
             WHERE syncStatus = :status 
             AND createdAt < :cutoffMs
             LIMIT :limit

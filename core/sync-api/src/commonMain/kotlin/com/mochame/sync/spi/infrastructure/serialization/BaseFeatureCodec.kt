@@ -172,7 +172,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
 
             existingCreatedAt != null && deltaCreatedAt != null -> {
                 val incoming = Instant.fromEpochMilliseconds(deltaCreatedAt)
-                logger.d { "Conflict [tag=$TAG_CREATED_AT]: using min(in=$incoming, local=$existingCreatedAt)" }
+                logger.d { "Conflict [key=${context.candidateKey}, tag=$TAG_CREATED_AT]: using min(in=$incoming, local=$existingCreatedAt)" }
                 minOf(existingCreatedAt, incoming)
             }
 
