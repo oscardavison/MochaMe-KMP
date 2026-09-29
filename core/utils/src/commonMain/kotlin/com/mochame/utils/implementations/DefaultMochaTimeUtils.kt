@@ -6,9 +6,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.format
-import kotlinx.datetime.format.DayOfWeekNames
-import kotlinx.datetime.format.MonthNames
-import kotlinx.datetime.format.char
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import org.koin.core.annotation.Single
@@ -45,7 +42,7 @@ open class DefaultMochaTimeUtils(
 
     override fun formatStandardDay(epochDay: Long): String {
         val date = LocalDate.fromEpochDays(epochDay)
-        return date.format(HeaderDateFormat)
+        return date.format(headerDateFormat)
     }
 
     override fun formatMochaDay(instant: Instant, timeZone: TimeZone): String {
@@ -56,7 +53,7 @@ open class DefaultMochaTimeUtils(
     override fun formatRelativeMochaDay(epochDay: Long): String {
         val today = getMochaDay()
         val date = LocalDate.fromEpochDays(epochDay)
-        val shortDate = date.format(MochaShortDateFormat)
+        val shortDate = date.format(shortDateFormat)
 
         return when (epochDay) {
             today -> "Today • $shortDate"
@@ -65,20 +62,4 @@ open class DefaultMochaTimeUtils(
             else -> formatStandardDay(epochDay)
         }
     }
-}
-
-private val HeaderDateFormat = LocalDate.Format {
-    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-    chars(", ")
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    char(' ')
-    day()
-    chars(", ")
-    year()
-}
-
-private val MochaShortDateFormat = LocalDate.Format {
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    char(' ')
-    day()
 }

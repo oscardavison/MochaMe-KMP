@@ -282,7 +282,7 @@ private fun NapSwitchField(
         Column(modifier = Modifier.weight(1f)) {
             Text("Napped Today", style = MaterialTheme.typography.titleSmall)
             Text(
-                text = if (isNapped) "Logged for today" else "Log for today",
+                text = if (isNapped) "Recharged" else "Recharge?",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -5,6 +5,10 @@ import com.mochame.utils.implementations.DefaultMochaTimeUtils
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.format.DayOfWeekNames
+import kotlinx.datetime.format.MonthNames
+import kotlinx.datetime.format.char
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
@@ -19,6 +23,22 @@ open class FakeTimeUtils(
 
     private val lock = reentrantLock()
     var currentTime: Instant = initialTime
+
+    override val headerDateFormat = LocalDate.Format {
+        dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+        chars(", ")
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        char(' ')
+        day()
+        chars(", ")
+        year()
+    }
+
+    override val shortDateFormat = LocalDate.Format {
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        char(' ')
+        day()
+    }
 
     fun advanceTime(duration: Duration) = lock.withLock { currentTime += duration }
     fun reverseTime(duration: Duration) = lock.withLock { currentTime -= duration }

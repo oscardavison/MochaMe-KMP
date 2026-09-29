@@ -41,7 +41,7 @@ interface DailyContextDao {
      * Direct lookup for Sync/Repository logic.
      * Includes deleted records so we can update existing tombstones.
      */
-    @Query("SELECT * FROM daily_context WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM daily_context WHERE id = :id AND isDeleted = 0 LIMIT 1")
     suspend fun getContextById(id: Long): DailyContextEntity?
 
     @Query("SELECT * FROM daily_context WHERE isDeleted = 0 ORDER BY id DESC")

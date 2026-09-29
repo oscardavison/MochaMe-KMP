@@ -3,6 +3,7 @@ package com.mochame.server.database
 import co.touchlab.kermit.Logger
 import com.mochame.server.relay.DeltaWriteIntent
 import com.mochame.server.utils.ServerConfig
+import com.mochame.server.utils.resolveBackupDirectory
 import com.mochame.utils.interfaces.TimeUtils
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -14,13 +15,26 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.io.files.SystemFileSystem
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 data class StoredDelta(
     val watermark: Long,
@@ -49,6 +63,7 @@ class ServerDatabase(
     private val writeDataSource: HikariDataSource
     private val readDataSource: HikariDataSource
     private val url = "jdbc:sqlite:$path"
+    private val backupMutex = Mutex()
 
     init {
         File(path).parentFile?.mkdirs()
@@ -334,6 +349,22 @@ class ServerDatabase(
         totalPruned
     }
 
+    /**
+     * To execute at most one backup concurrently.
+     */
+    suspend fun createBackup(targetFile: Path) = backupMutex.withLock {
+        targetFile.parent?.createDirectories()
+
+        targetFile.deleteIfExists()
+
+        withWriteConnection { conn ->
+            conn.prepareStatement("VACUUM INTO ?").use { stmt ->
+                stmt.setString(1, targetFile.absolutePathString())
+                stmt.execute()
+            }
+        }
+    }
+
     override fun close() {
         readDataSource.close()
         writeDataSource.close()
@@ -362,3 +393,40 @@ fun CoroutineScope.runtimeLogPruning(
         delay(interval)
     }
 }
+
+
+fun CoroutineScope.launchBackupSchedule(
+    database: ServerDatabase,
+    backupDir: Path = resolveBackupDirectory(),
+    interval: Duration = 1.days,
+    logger: Logger
+) = launch(CoroutineName("DatabaseBackupSchedule")) {
+        while (isActive) {
+            logger.i { "Automated database backup scheduled..." }
+
+            delay(interval)
+
+            val timestamp = Clock.System.now().toEpochMilliseconds()
+            val tempBackup = backupDir.resolve("mochame_backup_$timestamp.tmp")
+            val targetBackup = backupDir.resolve("mochame_backup_latest.db")
+
+            try {
+                database.createBackup(tempBackup)
+
+                Files.move(
+                    tempBackup,
+                    targetBackup,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+
+                logger.i { "Successfully backup to: $targetBackup" }
+            } catch (ce: CancellationException) {
+                Files.deleteIfExists(tempBackup)
+                throw ce
+            } catch (e: Exception) {
+                logger.e(e) { "Automated database backup failed" }
+                Files.deleteIfExists(tempBackup)
+            }
+        }
+    }

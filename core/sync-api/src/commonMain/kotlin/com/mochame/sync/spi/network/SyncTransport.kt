@@ -10,7 +10,7 @@ interface SyncTransport {
      * Returns true if the WebSocket session is active and open for transmission.
      */
     val isConnected: Boolean
-    suspend fun connect(host: String, port: Int, groupId: String)
+    suspend fun connect(config: NetworkConfig)
 
     /**
      * Dispatches an upstream client to the sync relay.

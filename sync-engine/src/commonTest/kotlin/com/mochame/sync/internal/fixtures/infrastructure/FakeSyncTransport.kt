@@ -1,5 +1,6 @@
-package com.mochame.sync.internal.fixtures
+package com.mochame.sync.internal.fixtures.infrastructure
 
+import com.mochame.sync.spi.network.NetworkConfig
 import com.mochame.sync.spi.network.SendResult
 import com.mochame.sync.spi.network.SyncTransport
 import kotlinx.atomicfu.locks.reentrantLock
@@ -30,7 +31,11 @@ class FakeSyncTransport(
     private var _onConnectedListener: (suspend () -> Unit)? = null
     private var _onDisconnectedListener: (suspend () -> Unit)? = null
 
-    data class ConnectCall(val host: String, val port: Int, val groupId: String)
+    data class ConnectCall(val config: NetworkConfig) {
+        val host: String = config.host
+        val port: Int = config.port
+        val groupId: String = config.groupId
+    }
     data class SentBatch(val batchId: Long, val payload: ByteArray)
 
     override var isConnected: Boolean
@@ -87,9 +92,9 @@ class FakeSyncTransport(
     val resumeCallCount: Int
         get() = lock.withLock { _resumeCallCount }
 
-    override suspend fun connect(host: String, port: Int, groupId: String) {
+    override suspend fun connect(config: NetworkConfig) {
         val listener = lock.withLock {
-            _connectCalls.add(ConnectCall(host, port, groupId))
+            _connectCalls.add(ConnectCall(config))
             _isConnected = true
             _onConnectedListener
         }

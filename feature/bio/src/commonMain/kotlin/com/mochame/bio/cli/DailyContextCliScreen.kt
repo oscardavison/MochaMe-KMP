@@ -13,7 +13,7 @@ import org.koin.core.annotation.Factory
 class DailyContextCliScreen(
     private val repository: DailyContextRepository,
     private val saveUseCase: SaveDailyContextUseCase,
-    private val timeProvider: MochaTimeUtils
+    private val timeProvider: MochaTimeUtils // Should be Default
 ) : InteractiveScreen {
 
     private var activeEpochDay: Long = timeProvider.getMochaDay()
@@ -61,7 +61,6 @@ class DailyContextCliScreen(
                 ScreenResult.Stay
             }
             "5" -> {
-                handleDelete()
                 handleDelete()
                 ScreenResult.Stay
             }

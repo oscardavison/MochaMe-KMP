@@ -14,6 +14,7 @@ VOLUME /app/data
 ENV SERVER_HOST=0.0.0.0
 ENV SERVER_PORT=8080
 ENV SQLITE_DB_PATH=/app/data/server-mochame.db
+ENV SQLITE_DB_BACKUP_DIR=/app/data/backups
 
 EXPOSE 8080
 

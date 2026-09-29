@@ -17,7 +17,7 @@ import com.mochame.sync.di.SyncOrchestrationModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.internal.fixtures.FakeQuarantinedPayloadStore
 import com.mochame.sync.fixtures.FakeSyncIntentStore
-import com.mochame.sync.internal.fixtures.FakeSyncTransport
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncTransport
 import com.mochame.sync.internal.fixtures.api.FakeSyncReceiver
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook

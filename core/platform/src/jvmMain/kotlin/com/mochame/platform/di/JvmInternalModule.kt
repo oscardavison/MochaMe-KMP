@@ -16,6 +16,7 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.parameter.parametersOf
+import java.util.Locale
 
 actual class PlatformContext
 
@@ -30,13 +31,13 @@ actual class InternalPlatformModule : KoinComponent {
 
     @Single
     fun provideAppPaths(): AppPathsProvider {
-        val userHome = System.getProperty("user.home")
-        val baseDir = "$userHome/.mochame"
+        val dataDir = System.getenv("MOCHAME_DATA_DIR")
+            ?: getDefaultDataDirectory()
 
         return object : AppPathsProvider {
-            override val blobPending = "$baseDir/blobs/pending"
-            override val blobCommitted = "$baseDir/blobs/committed"
-            override val databasePath = "$baseDir/jvm_mochame.db"
+            override val blobPending = "$dataDir/blobs/pending"
+            override val blobCommitted = "$dataDir/blobs/committed"
+            override val databasePath = "$dataDir/jvm_mochame.db"
         }
     }
 
@@ -57,5 +58,37 @@ actual class InternalPlatformModule : KoinComponent {
         return JvmBufferProvider(
             logger = get { parametersOf(LogTags.Domain.SYNC, LogTags.Layer.INFRA) }
         )
+    }
+}
+
+
+fun getDefaultDataDirectory(): Path {
+    val os = System.getProperty("os.name")?.lowercase(Locale.ROOT) ?: error("No OS detected.")
+    val homePath = System.getProperty("user.home") ?: error("No home directory detected.")
+
+    val home = Path(homePath)
+
+    return when {
+        "win" in os -> {
+            val appData = System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }
+            if (appData != null) {
+                Path(Path(appData), "MochaMe")
+            } else {
+                Path(home, "AppData", "Local", "MochaMe")
+            }
+        }
+
+        "mac" in os -> { // Not verified
+            Path(home, "Library", "Application Support", "MochaMe")
+        }
+
+        else -> { // Linux, BSD, POSIX (XDG Spec)
+            val xdg = System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() }
+            if (xdg != null) {
+                Path(Path(xdg), "mochame")
+            } else {
+                Path(home, ".local", "share", "mochame")
+            }
+        }
     }
 }

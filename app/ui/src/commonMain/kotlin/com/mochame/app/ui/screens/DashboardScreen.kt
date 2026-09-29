@@ -44,7 +44,7 @@ fun DashboardScreen(
 
         MochaHeader(
             title = "MochaMe",
-            subtitle = timeProvider.formatRelativeMochaDay(todayEpochDay)
+            subtitle = timeProvider.formatStandardDay(todayEpochDay)
         )
 
         Spacer(modifier = Modifier.height(28.dp))

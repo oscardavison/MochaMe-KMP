@@ -3,6 +3,7 @@ package com.mochame.server.relay
 import co.touchlab.kermit.Logger
 import com.mochame.server.utils.ServerConfig
 import com.mochame.server.database.ServerDatabase
+import com.mochame.server.database.launchBackupSchedule
 import com.mochame.server.database.runtimeLogPruning
 import com.mochame.utils.interfaces.TimeUtils
 import io.ktor.server.cio.CIO
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import java.nio.file.Path
 
 /**
  * Lifecycle orchestrator for the sync relay server.
@@ -36,6 +38,7 @@ class RelayServer(
     private val relayManager: RelayManager,
     private val serverScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val clock: TimeUtils,
+    private val backupDir: Path,
     private val logger: Logger
 ) : AutoCloseable {
 
@@ -47,6 +50,7 @@ class RelayServer(
     )
 
     private var pruningJob: Job? = null
+    private var backupJob: Job? = null
     private var engine: EmbeddedServer<*, *>? = null
 
     /**
@@ -66,6 +70,12 @@ class RelayServer(
             clock = clock
         )
 
+        backupJob = serverScope.launchBackupSchedule(
+            database = database,
+            backupDir = backupDir,
+            logger = logger
+        )
+
         engine = embeddedServer(CIO, config.port, config.host) {
             configureSyncRelay(
                 database = database,
@@ -79,7 +89,7 @@ class RelayServer(
     /**
      * Executes teardown of all relay subsystems.
      *
-     * 1. Cancels the periodic SQLite log compaction job.
+     * 1. Cancels the periodic SQLite log compaction job and backup job.
      * 2. Cancels [serverScope], terminating the [databaseActor] and active child coroutines.
      * 3. Stops the Ktor CIO server engine with a 1-second grace period and 3-second abort timeout, cancelling websocket instances.
      * 4. Closes the underlying [database] connection pool.

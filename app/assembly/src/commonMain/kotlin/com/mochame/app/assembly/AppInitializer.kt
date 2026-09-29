@@ -81,18 +81,14 @@ internal class DefaultAppInitializer(
             logger.i { "Initializing application..." }
 
             janitor.startupChecks().join()
-            delay(1.5.seconds) // so i get to see wheel spin
+            delay(1.5.seconds) // so i get to see wheel spin working
 
             bootUpdater.updateState(BootState.Ready)
             logger.i { "Application initialized successfully..." }
 
             configureTransport()
 
-            transport.connect(
-                host = connectionEndPoint.serverHost,
-                port = connectionEndPoint.serverPort,
-                groupId = connectionEndPoint.syncGroupId,
-            )
+            transport.connect(connectionEndPoint)
 
             coordinator.startOutboundListener()
         } catch (e: CancellationException) {

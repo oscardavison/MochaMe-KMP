@@ -5,8 +5,10 @@ import com.mochame.server.utils.ServerLogger
 import com.mochame.server.database.ServerDatabase
 import com.mochame.server.relay.RelayManager
 import com.mochame.server.relay.RelayServer
+import com.mochame.server.utils.resolveBackupDirectory
 import com.mochame.utils.implementations.DefaultTimeUtils
 import java.io.File
+import java.nio.file.Path
 
 
 fun main() {
@@ -15,6 +17,8 @@ fun main() {
 
     val dbPath: String = System.getenv("SQLITE_DB_PATH")
         ?: "${System.getProperty("user.home")}/.mochame/sync_server.db"
+    val backupDir: Path = resolveBackupDirectory()
+
     File(dbPath).parentFile?.mkdirs()
     val host: String = System.getenv("SERVER_HOST") ?: "0.0.0.0"
     val port: Int = System.getenv("SERVER_PORT")?.toIntOrNull() ?: 8080
@@ -27,6 +31,7 @@ fun main() {
         relayManager = relayManager,
         logger = logger,
         clock = clock,
+        backupDir = backupDir,
         config = ServerConfig.Default(port = port, host = host)
     )
 

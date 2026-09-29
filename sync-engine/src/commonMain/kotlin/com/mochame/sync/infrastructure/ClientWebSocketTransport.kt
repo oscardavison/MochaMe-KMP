@@ -5,6 +5,7 @@ import com.mochame.annotations.AppBackgroundScope
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.exceptions.MochaException
+import com.mochame.sync.spi.network.NetworkConfig
 import com.mochame.sync.spi.network.SendResult
 import com.mochame.sync.spi.network.SyncTransport
 import com.mochame.sync.spi.network.WireFrame
@@ -14,9 +15,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
+import io.ktor.client.plugins.websocket.WebSocketException
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.pingInterval
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.http.URLProtocol
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
@@ -65,6 +68,7 @@ internal class ClientWebSocketTransport(
     private val client = HttpClient(engine) {
         install(WebSockets) {
             pingInterval = 15.seconds
+            maxFrameSize = 1024 * 1024
         }
     }
 
@@ -72,7 +76,8 @@ internal class ClientWebSocketTransport(
         val host: String,
         val port: Int,
         val groupId: String,
-        val nodeId: String
+        val nodeId: String,
+        val isSecure: Boolean
     )
 
     private val transportJob = SupervisorJob(backgroundScope.coroutineContext[Job])
@@ -155,14 +160,12 @@ internal class ClientWebSocketTransport(
      * More than one possible endpoint at a time is not implemented or tested.
      * Ktor looks like i
      */
-    override suspend fun connect(
-        host: String,
-        port: Int,
-        groupId: String
-    ) {
+    override suspend fun connect(config: NetworkConfig) {
         lifecycleMutex.withLock {
             val nodeId = nodeManager.getNodeId() ?: error("Node Context is not initialized.")
-            val newEndpoint = ConnectionEndpoint(host, port, groupId, nodeId.value.toString())
+            val newEndpoint = with(config) {
+                ConnectionEndpoint(host, port, groupId, nodeId.value.toString(), isSecure)
+            }
 
             pauseDebounceJob?.cancel()
             pauseDebounceJob = null
@@ -280,12 +283,12 @@ internal class ClientWebSocketTransport(
                         }
 
                         is ClosedReceiveChannelException, is ClosedSendChannelException -> {
-                            logger.w(e) { "Channel closed abruptly by remote peer. Retrying in 10s..." }
+                            logger.w(e) { "Channel closure. Retrying in 10s..." }
                             awaitReconnect(10.seconds)
                         }
 
-                        is ResponseException -> {
-                            logger.w(e) { "Handshake HTTP error [${e.response.status}]. Retrying in 10s..." }
+                        is ResponseException, is WebSocketException -> {
+                            logger.w(e) { "Handshake HTTP error [${e.message}]. Retrying in 10s..." }
                             awaitReconnect(10.seconds)
                         }
 
@@ -305,7 +308,8 @@ internal class ClientWebSocketTransport(
         client.webSocket(
             host = target.host,
             port = target.port,
-            path = "/sync/${target.groupId}/${target.nodeId}?since=$currentWatermark"
+            path = "/sync/${target.groupId}/${target.nodeId}?since=$currentWatermark",
+            request = { url.protocol = if (target.isSecure) URLProtocol.WSS else URLProtocol.WS }
         ) {
             activeSession.value = this
             reconnectSignal.tryReceive()

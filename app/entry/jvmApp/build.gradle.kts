@@ -29,11 +29,11 @@ compose.desktop {
     application {
         mainClass = "com.mochame.app.entry.jvm.MainKt"
 
-        buildTypes.release.proguard { // Currently not working
-            configurationFiles.from(project.file("proguard-rules.pro"))
-            optimize = true
-            obfuscate = false
-        }
+//        buildTypes.release.proguard { // Currently not working
+//            configurationFiles.from(project.file("proguard-rules.pro"))
+//            optimize = true
+//            obfuscate = false
+//        }
 
         // JVM Runtime Flags (Memory & Wayland/Display tuning) - Need to verify this more
         jvmArgs += listOf(

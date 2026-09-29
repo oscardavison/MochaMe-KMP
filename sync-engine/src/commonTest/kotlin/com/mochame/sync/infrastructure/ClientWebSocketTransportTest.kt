@@ -5,11 +5,13 @@ import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.di.infrastructure.ClientWebSocketTransportTestEnv
 import com.mochame.sync.di.infrastructure.TransportTestModule
+import com.mochame.sync.spi.network.NetworkConfig
 import com.mochame.sync.spi.network.SendResult
 import com.mochame.sync.spi.network.WireFrame
 import com.mochame.sync.spi.network.WireFrameFactory
 import com.mochame.sync.spi.network.encode
 import com.mochame.utils.fixtures.TestPayloads
+import io.ktor.http.URLProtocol
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readBytes
@@ -59,6 +61,18 @@ private inline fun runEnv(
 @ExperimentalCoroutinesApi
 class ClientWebSocketTransportTest : MochaPlatformTest() {
 
+    private fun defaultConfig(
+        host: String = "localhost",
+        port: Int = 8080,
+        groupId: String = "team_alpha",
+        isSecure: Boolean = false
+    ) = NetworkConfig(
+        host = host,
+        port = port,
+        isSecure = isSecure,
+        groupId = groupId
+    )
+
     // -------------------------------------------------------------------------
     // Endpoint & Handshake
     // -------------------------------------------------------------------------
@@ -70,7 +84,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         val watermark = context.lastInboundWatermark ?: 0L
 
         // When: Connect
-        transport.connect(host = "localhost", port = 8080, groupId = "bene_gesserit")
+        transport.connect(defaultConfig(groupId = "bene_gesserit"))
         val request = awaitHandshake()
         val session = awaitSession()
         scope.runCurrent()
@@ -95,7 +109,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     @Test
     fun should_throwIllegalStateException_whenNodeIdMissing() = runEnv { scope ->
         val exception = assertFailsWith<IllegalStateException> {
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
         }
 
         assertEquals("Node Context is not initialized.", exception.message)
@@ -112,7 +126,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             nodeManager.getOrEstablishContext()
 
             // Given: An initial connection is established
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
 
             awaitHandshake()
@@ -123,7 +137,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             assertTrue(firstSession.coroutineContext.isActive)
 
             // When: connect() is invoked again with identical parameters while active
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
 
             // Then:
@@ -144,12 +158,12 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             engine.connectGate = gate
 
             // When: Concurrent active polling
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
             awaitHandshake()
             assertFalse(transport.isConnected)
 
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
 
             gate.complete(Unit)
@@ -182,7 +196,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     fun should_cancelTeardownAndRetainConnection_whenResumedWithinGracePeriod() = runEnv { scope ->
         // Given: An active connection is established
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         scope.runCurrent()
 
         awaitHandshake()
@@ -222,7 +236,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         val watermark = context.lastInboundWatermark ?: 0L
 
         // Given: Transport is paused and allowed to expire into a torn-down state
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
 
         awaitHandshake()
         val firstSession = awaitSession()
@@ -264,7 +278,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         nodeManager.getOrEstablishContext()
         engine.failureOnConnect = IOException("Connection refused: localhost:8080")
 
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         scope.runCurrent()
         assertFalse(transport.isConnected)
 
@@ -306,7 +320,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             engine.connectGate = gate
 
             // When:
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
 
             // Then: Handshake request arrived at the engine, but session is not established
@@ -338,7 +352,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
 
             val gate = CompletableDeferred<Unit>()
             engine.connectGate = gate
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
             awaitHandshake()
 
@@ -377,7 +391,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         runEnv { scope ->
             // Given: An active connection is established
             nodeManager.getOrEstablishContext()
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
 
             awaitHandshake()
             val session = awaitSession()
@@ -420,7 +434,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     fun should_returnSendResultFailure_onParsingError() = runEnv { scope ->
         // Given: Active session
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         awaitSession()
         scope.runCurrent()
@@ -440,7 +454,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     fun should_returnNoConnection_whenSessionCancelledConcurrently() = runEnv { scope ->
         // Given: Active connection
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session = awaitSession()
         scope.runCurrent()
@@ -469,7 +483,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             ackDeferred.complete(batchId to watermark)
         }
 
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session = awaitSession()
         scope.runCurrent()
@@ -499,7 +513,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             deltaDeferred.complete(watermark to payload)
         }
 
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session = awaitSession()
         scope.runCurrent()
@@ -530,7 +544,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
                 backfillCompleteDeferred.complete(Unit)
             }
 
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             awaitHandshake()
             val session = awaitSession()
             scope.runCurrent()
@@ -561,7 +575,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
                 throw IllegalStateException("Blargian Snagglebeast")
             }
 
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             awaitHandshake()
             val session = awaitSession()
             scope.runCurrent()
@@ -592,7 +606,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
                 throw MochaException.Persistent.DiskFull()
             }
 
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             awaitHandshake()
             val session = awaitSession()
             scope.runCurrent()
@@ -623,7 +637,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
                 throw MochaException.Persistent.DiskFull()
             }
 
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             awaitHandshake()
             val session = awaitSession()
             scope.runCurrent()
@@ -658,7 +672,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             // Given: Connection retry loop is established and no active session
             nodeManager.getOrEstablishContext()
             engine.failureOnConnect = IOException("No response")
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
             engine.failureOnConnect = null
 
@@ -669,7 +683,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             // When: Reconnect signal manually sent, earlier than standard retry attempt
             scope.advanceTimeBy(2.seconds)
             assertFalse(transport.isConnected)
-            transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+            transport.connect(defaultConfig())
             scope.runCurrent()
 
             // Then: Connection loop restarts and establishes a new session
@@ -687,7 +701,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         // Given: Server offline (Connection refused)
         engine.failureOnConnect = IOException("Connection refused: localhost:8080")
 
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         scope.runCurrent()
         assertFalse(transport.isConnected)
         assertTrue(engine.sessionChannel.isEmpty)
@@ -712,7 +726,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     @Test
     fun should_reconnectAfter10Seconds_whenClientsTrainGoesIntoASmallTunnel() = runEnv { scope ->
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session1 = awaitSession()
         scope.runCurrent()
@@ -742,7 +756,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     @Test
     fun should_attemptReconnectionIn30Seconds_whenServerClosesCleanly() = runEnv { scope ->
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session1 = awaitSession()
         scope.runCurrent()
@@ -778,7 +792,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     @Test
     fun should_reconnectAfter10Seconds_whenChannelClosesAbruptly() = runEnv { scope ->
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session1 = awaitSession()
         scope.runCurrent()
@@ -813,7 +827,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
     fun should_rethrowCancellationException_whenCallerIsCancelledDuringSend() = runEnv { scope ->
         // Given: Active session
         nodeManager.getOrEstablishContext()
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         awaitSession()
         scope.runCurrent()
@@ -842,7 +856,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             disconnectDeferred.complete(Unit)
         }
 
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         awaitHandshake()
         val session = awaitSession()
         scope.runCurrent()
@@ -869,12 +883,42 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
 
         // Given: Initial connect fails before handshake
         engine.failureOnConnect = IOException("Connection refused: localhost:8080")
-        transport.connect(host = "localhost", port = 8080, groupId = "team_alpha")
+        transport.connect(defaultConfig())
         scope.runCurrent()
 
         // Then: Disconnect listener is never invoked because no session was active
         assertFalse(disconnectedInvoked)
         assertFalse(transport.isConnected)
+
+        teardown()
+    }
+
+    // -------------------------------------------------------------------------
+    // Protocol / Security Verification
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun should_holdWssUrlInHandshakeRequest_whenSecureIsTrue() = runEnv {
+        nodeManager.getOrEstablishContext()
+
+        transport.connect(defaultConfig(isSecure = true))
+        val request = awaitHandshake()
+
+        assertEquals("wss", request.url.protocol.name)
+        assertEquals(URLProtocol.WSS, request.url.protocol)
+
+        teardown()
+    }
+
+    @Test
+    fun should_holdWsUrlInHandshakeRequest_whenSecureIsFalse() = runEnv {
+        nodeManager.getOrEstablishContext()
+
+        transport.connect(defaultConfig(isSecure = false))
+        val request = awaitHandshake()
+
+        assertEquals("ws", request.url.protocol.name)
+        assertEquals(URLProtocol.WS, request.url.protocol)
 
         teardown()
     }
