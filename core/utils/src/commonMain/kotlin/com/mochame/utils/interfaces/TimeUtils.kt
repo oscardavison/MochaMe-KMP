@@ -12,6 +12,18 @@ interface TimeUtils {
     val headerDateFormat : DateTimeFormat<LocalDate>
     val shortDateFormat: DateTimeFormat<LocalDate>
 
+    fun getStandardEpochDay(
+        instant: Instant = now(),
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): Long
+
+    fun formatStandardDay(epochDay: Long): String
+
+    fun formatRelativeDay(
+        epochDay: Long,
+        referenceToday: Long = getStandardEpochDay()
+    ): String
+
     fun getMillisAgo(
         duration: Duration,
         timeZone: TimeZone = TimeZone.currentSystemDefault()

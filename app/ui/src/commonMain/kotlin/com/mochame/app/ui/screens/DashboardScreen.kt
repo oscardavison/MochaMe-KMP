@@ -22,9 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.mochame.core.design.AppLogo
 import com.mochame.core.design.MochaHeader
 import com.mochame.utils.interfaces.MochaTimeUtils
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
-import kotlin.time.Clock
 
 @Composable
 fun DashboardScreen(
@@ -32,7 +29,7 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     timeProvider: MochaTimeUtils
 ) {
-    val todayEpochDay: Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
+    val todayEpochDay: Long = timeProvider.getStandardEpochDay()
     val yesterday: Long = todayEpochDay - 1L
 
     Column(

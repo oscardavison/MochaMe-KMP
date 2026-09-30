@@ -90,8 +90,7 @@ fun DailyContextScreen(
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
     val readableDate = remember(state.epochDay) {
-        // TODO: Don't use to display
-        timeUtils.formatRelativeMochaDay(state.epochDay)
+        timeUtils.formatStandardDay(state.epochDay)
     }
 
     BoxWithConstraints(

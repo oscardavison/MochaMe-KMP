@@ -279,7 +279,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
             if (incomingHlc != null)
                 return reject(candidateKey) { "Non-existent local record (remote HLC: $incomingHlc)" }
 
-            throw MochaException.Transient.StateIssue("Local Delete attempt against non-existent record: $candidateKey.")
+            return reject(candidateKey) { "Local Delete attempt against non-existent record: $candidateKey." }
         }
 
         deps.hlcFactory.assertValid(existing.hlc, candidateKey)

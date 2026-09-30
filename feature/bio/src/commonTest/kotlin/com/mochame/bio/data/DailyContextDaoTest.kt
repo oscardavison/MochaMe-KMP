@@ -300,8 +300,8 @@ class DailyContextDaoTest : MochaPlatformTest() {
 
         hardDeletePruning(3000L)
 
-        assertNull(getContextById(1L))
-        assertNotNull(getContextById(2L))
+        assertNull(getSoftDeletedContextById(1L))
+        assertNotNull(getSoftDeletedContextById(2L))
     }
 
 }

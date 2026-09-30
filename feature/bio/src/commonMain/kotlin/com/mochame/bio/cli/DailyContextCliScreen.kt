@@ -13,13 +13,13 @@ import org.koin.core.annotation.Factory
 class DailyContextCliScreen(
     private val repository: DailyContextRepository,
     private val saveUseCase: SaveDailyContextUseCase,
-    private val timeProvider: MochaTimeUtils // Should be Default
+    private val timeProvider: MochaTimeUtils
 ) : InteractiveScreen {
 
-    private var activeEpochDay: Long = timeProvider.getMochaDay()
+    private var activeEpochDay: Long = timeProvider.getStandardEpochDay()
 
     override val title: String
-        get() = "Daily Context (${timeProvider.formatRelativeMochaDay(activeEpochDay)})"
+        get() = "Daily Context (${timeProvider.formatStandardDay(activeEpochDay)})"
 
     override suspend fun renderAndHandleInput(): ScreenResult {
         val currentEntity = repository.getContext(activeEpochDay)
@@ -239,7 +239,7 @@ class DailyContextCliScreen(
         }
 
         activeEpochDay = if (input.equals("t", ignoreCase = true) || input.isNullOrEmpty()) {
-            timeProvider.getMochaDay()
+            timeProvider.getStandardEpochDay()
         } else {
             input.toLongOrNull() ?: activeEpochDay
         }
