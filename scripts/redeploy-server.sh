@@ -5,11 +5,12 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SSH_KEY="${HOME}/.ssh/mochame-relay_key.pem"
 AZURE_HOST="azureuser@9.160.35.162"
 
-info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
+info()    { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 success() { echo -e "\033[1;32m[SUCCESS]\033[0m $*"; }
+err()     { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; }
 
 if [[ ! -f "${SSH_KEY}" ]]; then
-    echo -e "\033[1;31m[ERROR]\033[0m SSH key not found at: ${SSH_KEY}" >&2
+    err "SSH key not found at: ${SSH_KEY}"
     exit 1
 fi
 
@@ -22,13 +23,13 @@ info "Compiling locally..."
 SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
 
 if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
-    echo -e "\033[1;31m[ERROR]\033[0m Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}" >&2
+    err "Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}"
     exit 1
 fi
 
 TEMP_ARCHIVE="/tmp/server-dist.tar.gz"
 
-info "Compressing binaries into tarball..."
+info "Compressing server binaries into tarball..."
 tar -czf "${TEMP_ARCHIVE}" -C "${SERVER_INSTALL_DIR}" .
 
 # ------------------------------------------------------------------------------
@@ -43,10 +44,10 @@ if [[ -f "${PROJECT_ROOT}/server/Dockerfile" ]]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Remote Wipe, Extract, Rebuild & Follow Logs
+# 3. Remote Wipe, Extract, Rebuild & Snapshot Logs
 # ------------------------------------------------------------------------------
 info "Executing remote redeployment on Azure..."
-ssh -t -i "${SSH_KEY}" "${AZURE_HOST}" bash << 'EOF'
+ssh -i "${SSH_KEY}" "${AZURE_HOST}" bash << 'EOF'
 set -euo pipefail
 
 cd ~/mochame
@@ -59,16 +60,23 @@ rm -rf server-data
 rm -rf ~/.local/share/mochame
 rm -rf server/build/install/server
 
+echo "==> Pre-creating server-data as azureuser (UID 1000)..."
+mkdir -p server-data
+
 echo "==> Unpacking new server distribution..."
 mkdir -p server/build/install/server
 tar -xzf /tmp/server-dist.tar.gz -C server/build/install/server
 rm -f /tmp/server-dist.tar.gz
 
-echo "==> Rebuilding image and starting container..."
+echo "==> Starting container..."
 docker compose up -d --build --force-recreate
 
-echo "==> Tailing container logs (Press Ctrl+C to exit log viewer)..."
-docker compose logs -f --tail=50
+echo "==> Waiting for Ktor initialization..."
+sleep 2
+
+echo "==> Relay status and recent logs:"
+docker compose ps
+docker compose logs --tail=20
 EOF
 
-success "Server deployed and verified."
+success "Server deployed."
