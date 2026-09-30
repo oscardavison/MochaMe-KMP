@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=MochaMe
-Comment=MochaMe Local-First
-Exec=/opt/mochame/bin/mochame
-Icon=/opt/mochame/lib/mochame.png
-Terminal=false
-Type=Application
-Categories=Utility;
-StartupWMClass=com-mochame-app-entry-jvmApp-Mainkt

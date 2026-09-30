@@ -37,7 +37,7 @@ compose.desktop {
 
         // JVM Runtime Flags (Memory & Wayland/Display tuning) - Need to verify this more
         jvmArgs += listOf(
-            "-Xms64m",                   // Low initial heap for snappy startup
+            "-Xms64m",                   // Low initial heap
             "-Xmx512m",                  // Cap maximum heap to keep desktop RAM usage modest
             "-XX:+UseG1GC",              // Low-latency garbage collection
             "-Dsun.java2d.uiScale.enabled=true" // Ensure clean text scaling on 4K/HiDPI
@@ -70,7 +70,10 @@ compose.desktop {
         }
     }
 
-    tasks.withType<JavaExec> {
-        systemProperty("dark.theme", System.getProperty("dark.theme") ?: "true")
+    tasks.withType<JavaExec>().configureEach {
+        systemProperty(
+            "dark.theme",
+            providers.systemProperty("dark.theme").orElse("true")
+        )
     }
 }
