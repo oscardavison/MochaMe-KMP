@@ -19,6 +19,7 @@ captures
 node_modules/
 .antigravitycli
 docs/code-review
+/dist
 
 /server-data/
 *.db
