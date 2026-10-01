@@ -82,9 +82,6 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         }
     }
 
-    // -----------------------------------------------------------------
-    // DECODE: Bytes -> D -> T
-    // -----------------------------------------------------------------
     @OptIn(ExperimentalSerializationApi::class)
     override fun decode(
         bytes: ByteArray,
@@ -100,19 +97,23 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
             throw e
         }
 
+        val isDelete = delta.isDeleted == true
+
         val scope = FieldMergeScope(
             existingBytes = existing?.fieldHlcs ?: ByteArray(0),
             incomingHlc = context.hlc,
             changedMask = context.changedMask,
-            logger = logger
+            logger = logger,
+            isDelete = isDelete
         )
 
         val createdAt = resolveCreatedAt(delta.createdAt, existing?.createdAt, context)
-        val deleteState = scope.resolveDeleteState(delta.isDeleted, existing?.isDeleted, delta.id)
         val mergedDomain = scope.mergeDomainDelta(delta, context, existing)
+        val deleteState = scope.resolveDeleteState(isDelete, delta.id)
 
+        val headerHlc = existing?.hlc?.takeIf { it > context.hlc } ?: context.hlc
         return mergedDomain.withSyncHeader(
-            hlc = context.hlc,
+            hlc = headerHlc,
             lastModified = context.hlc.ts,
             createdAt = createdAt,
             isDeleted = deleteState,
@@ -120,39 +121,12 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         ).also { logger.v { "Decoding finalized. key=${it.id}" } }
     }
 
-    private fun FieldMergeScope.resolveDeleteState(
-        deltaIsDeleted: Boolean?,
-        existingIsDeleted: Boolean?,
-        candidateKey: Long
-    ): Boolean {
-        val localLastDeleteHlc = getTagHlc(TAG_IS_DELETED)
-        val isNewer = localLastDeleteHlc == null || incomingHlc > localLastDeleteHlc
-
-        return when {
-            deltaIsDeleted == true -> {
-                if (isNewer) {
-                    updateTag(TAG_IS_DELETED, incomingHlc)
-                    logger.v { "Tag[$TAG_IS_DELETED] updated [key=$candidateKey]: Marked deleted at HLC=$incomingHlc" }
-                    true
-                } else {
-                    logger.v { "Tag[$TAG_IS_DELETED] dropped [key=$candidateKey]: Local delete HLC ($localLastDeleteHlc) >= incoming ($incomingHlc)" }
-                    existingIsDeleted ?: true
-                }
-            }
-
-            existingIsDeleted == true -> {
-                if (isNewer) {
-                    updateTag(TAG_IS_DELETED, incomingHlc)
-                    logger.i { "Restored [key=$candidateKey]: [tag=$TAG_IS_DELETED] Incoming update (HLC=$incomingHlc) overrides (HLC=$localLastDeleteHlc)" }
-                    false
-                } else {
-                    logger.v { "Field Rejected [tag=$TAG_IS_DELETED]: incoming HLC ($incomingHlc) <= local HLC ($localLastDeleteHlc)." }
-                    true
-                }
-            }
-
-            else -> false
-        }
+    private fun FieldMergeScope.resolveDeleteState(isDeleteDelta: Boolean, key: Long): Boolean {
+        if (isDeleteDelta) stampIfNewer(TAG_IS_DELETED)
+        val horizon = getTagHlc(TAG_IS_DELETED) ?: return false
+        val revived = hasTagNewerThan(horizon, TAG_IS_DELETED)
+        logger.v { "Delete state [key=$key] horizon=$horizon revived=$revived" }
+        return !revived
     }
 
     protected fun resolveCreatedAt(
@@ -237,7 +211,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
     }
 
     /**
-     * Automatically computes Tags 1, 2 and 3 (id, isDeleted, createdAt)
+     * Computes Tags 1, 2 and 3 (id, isDeleted, createdAt)
      * and delegates domain field diffing ([FIRST_DOMAIN_TAG]) to [computeDomainChangedTags].
      */
     override fun computeChangedTags(new: T, old: T?): List<Int> = buildList {
@@ -299,6 +273,11 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
      *         countValue = eval(TAG_COUNT_VALUE, delta.countValue, existing?.countValue)
      *     )
      * ```
+     *
+     * Limitation: If models were to incorporate extensions to the protobuf schema in future app version,
+     * the field hlc evaluation, does not extend to those additional fields, and the existing extended
+     * fields may retain their existing value. Resolving deletion would not
+     *
      */
     protected abstract fun FieldMergeScope.mergeDomainDelta(
         delta: D,

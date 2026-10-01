@@ -28,14 +28,7 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
         require(tagId in 0..127)
 
         val index = findTagIndex(tagId) ?: return null
-        val ts = bytes.readLongAt(index + 1)
-        val count = bytes.readUShortAt(index + 9)
-
-        val msb = bytes.readLongAt(index + 11)
-        val lsb = bytes.readLongAt(index + 19)
-        val nodeId = NodeId(Uuid.fromLongs(msb, lsb))
-
-        return HLC(ts = ts, count = count, nodeId = nodeId)
+        return readHlcAt(index)
     }
 
     fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap {
@@ -65,6 +58,35 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
             i += RECORD_SIZE
         }
         return null
+    }
+
+    /** True if any record other than [excludeTag] carries an HLC strictly newer than [horizon]. */
+    fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean {
+        var i = 0
+        while (i < bytes.size) {
+            val tag = bytes[i].toInt()
+            if (tag != excludeTag) {
+                val hlc = readHlcAt(i)
+                if (hlc > horizon) return true
+            }
+            i += RECORD_SIZE
+        }
+        return false
+    }
+
+    fun withoutTag(tagId: Int): FieldHlcMap {
+        val i = findTagIndex(tagId) ?: return this
+        return FieldHlcMap(bytes.copyOfRange(0, i) + bytes.copyOfRange(i + RECORD_SIZE, bytes.size))
+    }
+
+    private fun readHlcAt(offset: Int): HLC {
+        val ts = bytes.readLongAt(offset + 1)
+        val count = bytes.readUShortAt(offset + 9)
+        val msb = bytes.readLongAt(offset + 11)
+        val lsb = bytes.readLongAt(offset + 19)
+        val nodeId = NodeId(Uuid.fromLongs(msb, lsb))
+
+        return HLC(ts = ts, count = count, nodeId = nodeId)
     }
 
     companion object {

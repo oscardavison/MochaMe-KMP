@@ -4,9 +4,9 @@ import app.cash.turbine.test
 import com.mochame.bio.di.BioInfraTestModule
 import com.mochame.bio.di.BioTestEnv
 import com.mochame.bio.domain.DailyContext
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_IS_NAPPED
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_READINESS_SCORE
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_SLEEP_HOURS
+import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_IS_NAPPED
+import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_READINESS_SCORE
+import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_SLEEP_HOURS
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runDatabaseEnvironment
 import com.mochame.sync.api.boot.BootState

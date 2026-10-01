@@ -13,8 +13,10 @@ import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.hlc.HLC
 import com.mochame.sync.api.metadata.FeatureContext
+import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.repository.LocalFirstDependencies
 import com.mochame.sync.common.InternalTestApi
+import com.mochame.sync.common.toBitmask
 import com.mochame.sync.di.codec.CodecTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.di.infrastructure.DefaultKeyedLockerModule
@@ -22,15 +24,17 @@ import com.mochame.sync.fixtures.FakeBlobStore
 import com.mochame.sync.fixtures.FakeSyncIntentStore
 import com.mochame.sync.fixtures.di.FixturesSyncModule
 import com.mochame.sync.infrastructure.DefaultKeyedLocker
-import com.mochame.sync.internal.fixtures.FeatureRepository
+import com.mochame.sync.internal.fixtures.infrastructure.FeatureRepositoryFixture
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook
 import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecRouter
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecRouterFixture
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1
+import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.spi.infrastructure.BufferProvider
 import com.mochame.sync.spi.infrastructure.KeyedLocker
+import com.mochame.sync.spi.models.DecodeContext
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.Dispatchers
@@ -85,7 +89,7 @@ internal class LocalFirstRepoTestModule {
         deps: LocalFirstDependencies,
         codecRouter: FeatureCodecRouterFixture,
         logger: Logger,
-    ): FeatureRepository = FeatureRepository(
+    ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
         deps = deps,
         codecRouter = codecRouter,
@@ -96,7 +100,7 @@ internal class LocalFirstRepoTestModule {
 @Factory
 @ExperimentalKermitApi
 internal class LocalFirstRepoTestEnv(
-    val repo: FeatureRepository,
+    val repo: FeatureRepositoryFixture,
     val hlcFactory: SpyHlcFactory,
     val intentStore: FakeSyncIntentStore,
     val workerHook: SpySyncWorkerHook,
@@ -115,7 +119,7 @@ internal class LocalFirstRepoTestEnv(
     @OptIn(InternalTestApi::class)
     fun createCodecIntegratedRepo(
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A
-    ): FeatureRepository = FeatureRepository(
+    ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
         deps = deps,
         codecRouter = FeatureCodecRouter(integratedCodec, logger),
@@ -127,7 +131,7 @@ internal class LocalFirstRepoTestEnv(
         logger: Logger,
         fakeBufferProvider: BufferProvider,
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A
-    ): FeatureRepository = FeatureRepository(
+    ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
         deps = deps.copy(ioContext = Dispatchers.Default),
         codecRouter = FeatureCodecRouterFixture(
@@ -141,5 +145,26 @@ internal class LocalFirstRepoTestEnv(
     suspend fun setupValidContext(hlc: HLC? = null) {
         hlcFactory.hydrate(hlc, TestNodeId.A)
         bootProvider.updateState(BootState.Ready)
+    }
+
+   fun makeRemoteIntent(
+       new: FeatureEntity,
+       old: FeatureEntity?,
+       hlc: HLC,
+       op: MutationOp
+    ): Pair<DecodeContext, ByteArray> {
+        val payload = integratedCodec.encode(new, old)
+
+        val changedTags = integratedCodec.computeChangedTags(new, old)
+
+        val context = DecodeContext(
+            candidateKey = new.id,
+            hlc = hlc,
+            op = op,
+            featureSchemaVersion = 1,
+            changedMask = changedTags.toBitmask()
+        )
+
+        return context to payload
     }
 }

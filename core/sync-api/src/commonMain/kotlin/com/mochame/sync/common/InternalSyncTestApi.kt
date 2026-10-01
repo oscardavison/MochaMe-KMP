@@ -5,5 +5,5 @@ package com.mochame.sync.common
     message = "This API is for testing only and must not be used in production code."
 )
 @Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD, AnnotationTarget.FUNCTION)
 annotation class InternalTestApi

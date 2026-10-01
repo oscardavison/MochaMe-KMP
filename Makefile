@@ -1,4 +1,4 @@
-.PHONY: auth-sudo package redeploy-local redeploy-server debug fresh fresh-all
+.PHONY: auth-sudo package redeploy-mochame redeploy-server debug fresh fresh-all
 
 auth-sudo:
 	@sudo -v
@@ -6,8 +6,8 @@ auth-sudo:
 package:
 	@./scripts/package.sh
 
-redeploy-local: auth-sudo
-	@./scripts/redeploy-local.sh
+redeploy-mochame: auth-sudo
+	@./scripts/redeploy-mochame.sh
 
 redeploy-server:
 	@./scripts/redeploy-server.sh
@@ -15,6 +15,6 @@ redeploy-server:
 debug:
 	@./scripts/debug-run.sh
 
-fresh: auth-sudo package redeploy-local
+fresh: auth-sudo package redeploy-mochame
 
-fresh-all: auth-sudo package redeploy-server redeploy-local
+fresh-all: auth-sudo package redeploy-server redeploy-mochame

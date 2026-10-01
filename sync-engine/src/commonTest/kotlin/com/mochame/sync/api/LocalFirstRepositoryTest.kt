@@ -14,8 +14,12 @@ import com.mochame.sync.common.bitmaskOf
 import com.mochame.sync.di.api.LocalFirstRepoTestEnv
 import com.mochame.sync.di.api.LocalFirstRepoTestModule
 import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
+import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
+import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_TEXT_VALUE
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.internal.fixtures.serialization.deriveContext
+import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
+import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
 import com.mochame.sync.spi.models.DecodeContext
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
@@ -196,18 +200,12 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun localDelete_onNonExistentRecord_throwsTransientStateIssue() = runEnv {
+    fun localDelete_onNonExistentRecord_skipsWithoutErrorOrIntentGeneration() = runEnv {
         setupValidContext()
         val nonExistentKey = 999L
 
-        val exception = assertFailsWith<MochaException.Transient.StateIssue> {
-            repo.delete(nonExistentKey)
-        }
+        repo.delete(nonExistentKey)
 
-        assertEquals(
-            exception.message.contains("Local Delete attempt against non-existent record: $nonExistentKey"),
-            true
-        )
         assertEquals(0, intentStore.intents.size)
         assertEquals(0, workerHook.invalidationCount)
         assertEquals(0, hlcFactory.getNextHlcCallCount)
@@ -234,94 +232,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertEquals(0, workerHook.invalidationCount)
         assertEquals(initialHlcCalls, hlcFactory.getNextHlcCallCount)
     }
-
-    @Test
-    fun processRemoteIntent_whenIncomingDeleteHasOlderHlcThanLocalActiveEntity_skipsAndPreservesActiveState() =
-        runEnv {
-            setupValidContext()
-            val candidateKey = 110L
-
-            // Device A: Local active entity with a newer HLC
-            val localHlc = TestHlcFactory.createWithOffset((-1).minutes)
-            val localEntity = FeatureEntity(
-                id = candidateKey,
-                hlc = localHlc,
-                isDeleted = false,
-                textValue = "LOCAL_ACTIVE_TEXT",
-                countValue = 42
-            )
-            repo.seed(localEntity)
-
-            // Device B: Obsolete remote delete
-            val obsoleteDeleteHlc = TestHlcFactory.createWithOffset((-5).minutes)
-            val decodeContext = DecodeContext(
-                candidateKey = candidateKey,
-                hlc = obsoleteDeleteHlc,
-                op = MutationOp.DELETE,
-                featureSchemaVersion = 1,
-                changedMask = 0L
-            )
-
-            // Device A: Ingest remote intent
-            repo.processRemoteIntent(decodeContext, FakeFeatureCodec.BYTES_PRESET)
-
-            // Final State Assertions
-            val stored = repo.storedEntities[candidateKey]
-            assertNotNull(stored, "Stored entity must still exist")
-            assertFalse(stored.isDeleted, "Entity remains active; obsolete delete is rejected")
-            assertEquals("LOCAL_ACTIVE_TEXT", stored.textValue)
-            assertEquals(42, stored.countValue)
-            assertEquals(localHlc, stored.hlc, "Entity HLC is not modified")
-            assertTrue(writer.logs.any { "Obsolete Remote Delete" in it.message })
-
-            // 5. Side-effect Assertions
-            assertEquals(0, intentStore.intents.size, "No intents recorded")
-            assertEquals(0, workerHook.invalidationCount, "No worker invalidation")
-        }
-
-    @Test
-    fun processRemoteIntent_whenIncomingDeleteTargetsAlreadyDeletedEntityWithNewerHlc_skipsAndPreservesTombstone() =
-        runEnv {
-            setupValidContext()
-            val candidateKey = 111L
-
-            // Device A: Deleted entity with an older HLC
-            val localHlc = TestHlcFactory.createWithOffset((-5).minutes)
-            val localTombstone = FeatureEntity(
-                id = candidateKey,
-                hlc = localHlc,
-                isDeleted = true,
-                textValue = "ALREADY_DELETED_TEXT",
-                countValue = 0
-            )
-            repo.seed(localTombstone)
-
-            // Incoming remote delete intent with a newer HLC
-            val remoteNewerHlc = TestHlcFactory.createWithOffset((-1).minutes)
-            val decodeContext = DecodeContext(
-                candidateKey = candidateKey,
-                hlc = remoteNewerHlc,
-                op = MutationOp.DELETE,
-                featureSchemaVersion = 1,
-                changedMask = 0L
-            )
-
-            // Device A: Ingest remote intent
-            repo.processRemoteIntent(decodeContext, FakeFeatureCodec.BYTES_PRESET)
-
-            // Final State Assertions
-            val stored = repo.storedEntities[candidateKey]
-            assertNotNull(stored, "Stored entity must still exist as tombstone")
-            assertTrue(stored.isDeleted, "Entity remains deleted")
-            assertEquals("ALREADY_DELETED_TEXT", stored.textValue)
-            assertEquals(0, stored.countValue)
-            assertEquals(localHlc, stored.hlc, "Local tombstone HLC remains unchanged")
-            assertTrue(writer.logs.any { "Local record is already deleted" in it.message })
-
-            // Side-effect Assertions
-            assertEquals(0, intentStore.intents.size, "No intents recorded for skipped")
-            assertEquals(0, workerHook.invalidationCount, "No worker invalidation triggered")
-        }
 
     @Test
     fun processRemoteIntent_whenExistingIsNullAndOpIsDelete_skipsGracefullyWithoutRecordingIntent() =

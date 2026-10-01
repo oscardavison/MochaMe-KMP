@@ -65,7 +65,7 @@ mkdir -p server-data
 
 echo "==> Unpacking new server distribution..."
 mkdir -p server/build/install/server
-tar -xzf /tmp/server-dist.tar.gz -C server/build/install/server
+tar -xmzf /tmp/server-dist.tar.gz -C server/build/install/server
 rm -f /tmp/server-dist.tar.gz
 
 echo "==> Starting container..."

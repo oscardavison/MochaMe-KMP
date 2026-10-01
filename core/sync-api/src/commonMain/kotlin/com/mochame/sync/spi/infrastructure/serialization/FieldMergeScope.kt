@@ -7,12 +7,15 @@ import com.mochame.sync.common.hasTag
 /**
  * Scope provided to feature codecs during field-level delta merging.
  * Manages LWW evaluation and binary blob construction.
+ *
+ * @param isDelete True when the delta is a deletion: every domain tag is treated as a null-write at [incomingHlc].
  */
 class FieldMergeScope(
     existingBytes: ByteArray,
     val incomingHlc: HLC,
     val changedMask: Long,
-    val logger: Logger
+    val logger: Logger,
+    val isDelete: Boolean = false
 ) {
     @PublishedApi
     internal var index = FieldHlcMap(existingBytes)
@@ -25,10 +28,9 @@ class FieldMergeScope(
      */
     @Suppress("NOTHING_TO_INLINE")
     inline fun <V> eval(tagId: Int, incomingVal: V?, existingVal: V?): V? {
-        if (!changedMask.hasTag(tagId)) {
-            return existingVal
-        }
-        
+        // A delete delta carries no domain fields (incomingVal is null) and mask {2};
+        if (!isDelete && !changedMask.hasTag(tagId)) return existingVal
+
         val localTagHlc = index.getHlc(tagId)
 
         return if (localTagHlc == null || incomingHlc > localTagHlc) {
@@ -40,11 +42,18 @@ class FieldMergeScope(
         }
     }
 
-    internal fun getTagHlc(tagId: Int): HLC? = index.getHlc(tagId)
-
-    internal fun updateTag(tagId: Int, hlc: HLC) {
-        index = index.updateTag(tagId, hlc)
+    /** Stamp the tag only if the incoming HLC is newer. */
+    internal fun stampIfNewer(tagId: Int) {
+        val local = index.getHlc(tagId)
+        if (local == null || incomingHlc > local) {
+            index = index.updateTag(tagId, incomingHlc)
+        }
     }
+
+    internal fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean =
+        index.hasTagNewerThan(horizon, excludeTag)
+
+    internal fun getTagHlc(tagId: Int): HLC? = index.getHlc(tagId)
 
     internal fun buildResultBlob(): ByteArray = index.bytes
 }

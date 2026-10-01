@@ -18,18 +18,23 @@ if [[ ! -d "${DIST_DIR}" ]]; then
     exit 1
 fi
 
+purge_if_installed() {
+    local pkg="$1"
+    if dpkg -s "${pkg}" &>/dev/null; then
+        sudo apt purge -y "${pkg}" && info "Found and purged ${pkg}."
+    else
+        info "${pkg} is not installed; skipping."
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Uninstall
 # ------------------------------------------------------------------------------
-info "Removing existing Desktop and CLI packages..."
-if dpkg -l | grep -q "^ii  mochame "; then
-    sudo apt purge -y mochame
-fi
-if dpkg -l | grep -q "^ii  mochame-cli "; then
-    sudo apt purge -y mochame-cli
-fi
+info "Checking and removing existing packages..."
+purge_if_installed "mochame"
+purge_if_installed "mochame-cli"
 
-info "Removing loose CLI binaries..."
+info "Removing local CLI binaries..."
 rm -f "${HOME}/.local/bin/mochame-cli"
 sudo rm -f "/usr/local/bin/mochame-cli"
 
@@ -60,13 +65,47 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Azure Relay ClI Tool
+# 3. Azure Relay CLI Tool
 # ------------------------------------------------------------------------------
+
 if [[ -f "${SSH_KEY}" ]]; then
+    REMOTE_DEB="/tmp/mochame-cli_${VERSION}_amd64.deb"
+
     info "Uploading CLI package to Azure Relay..."
-    scp -i "${SSH_KEY}" "${DIST_DIR}/mochame-cli_${VERSION}_amd64.deb" "${AZURE_HOST}:${AZURE_DEST}"
+    scp -i "${SSH_KEY}" "${DIST_DIR}/mochame-cli_${VERSION}_amd64.deb" "${AZURE_HOST}:${REMOTE_DEB}"
+
+    info "Executing remote package lifecycle on Azure..."
+    ssh -i "${SSH_KEY}" "${AZURE_HOST}" bash -s -- "${REMOTE_DEB}" << 'EOF'
+set -euo pipefail
+DEB_PATH="$1"
+
+# 1. Inspect and Purge Existing State
+if dpkg -s mochame-cli &>/dev/null; then
+    sudo apt purge -y mochame-cli
+    echo -e "\033[1;32m[REMOTE]\033[0m Successfully purged previous mochame-cli."
 else
-    warn "SSH key not found at ${SSH_KEY}. Skipping Azure upload."
+    echo -e "\033[1;34m[REMOTE]\033[0m No existing mochame-cli package found. Skipping purge."
 fi
 
-success "Local re-deployment and database reset complete."
+# 2. Install New Package
+echo -e "\033[1;34m[REMOTE]\033[0m Installing fresh package from ${DEB_PATH}..."
+sudo apt install -y "${DEB_PATH}"
+
+# 3. Deterministic Verification
+INSTALLED_BIN="$(command -v mochame-cli || true)"
+if [[ -n "${INSTALLED_BIN}" ]] && dpkg -s mochame-cli &>/dev/null; then
+    echo -e "\033[1;32m[REMOTE]\033[0m Verified: server side mochame-cli is verified at ${INSTALLED_BIN}"
+else
+    echo -e "\033[1;31m[REMOTE]\033[0m Verification failed: mochame-cli not found in system PATH." >&2
+    exit 1
+fi
+
+# 4. Cleanup Remote Staging File
+rm -f "${DEB_PATH}"
+EOF
+
+else
+    warn "SSH key not found at ${SSH_KEY}. Skipping Azure CLI deployment."
+fi
+
+success "MochaMe re-deployment and database reset complete."

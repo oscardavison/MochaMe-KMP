@@ -1,9 +1,7 @@
-package com.mochame.bio.domain
+package com.mochame.bio.infrastructure
 
 import co.touchlab.kermit.Logger
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_IS_NAPPED
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_READINESS_SCORE
-import com.mochame.bio.domain.DailyContextCodecV1.Companion.TAG_SLEEP_HOURS
+import com.mochame.bio.domain.DailyContext
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.models.LocalFirstDelta
@@ -26,9 +24,9 @@ data class DailyContextDeltaV1(
     @ProtoNumber(TAG_PRIMARY_KEY) override val id: Long,
     @ProtoNumber(TAG_IS_DELETED) override val isDeleted: Boolean? = null,
     @ProtoNumber(TAG_CREATED_AT) override val createdAt: Long? = null,
-    @ProtoNumber(TAG_SLEEP_HOURS) val sleepHours: Double? = null,
-    @ProtoNumber(TAG_READINESS_SCORE) val readinessScore: Int? = null,
-    @ProtoNumber(TAG_IS_NAPPED) val isNapped: Boolean? = null,
+    @ProtoNumber(DailyContextCodecV1.TAG_SLEEP_HOURS) val sleepHours: Double? = null,
+    @ProtoNumber(DailyContextCodecV1.TAG_READINESS_SCORE) val readinessScore: Int? = null,
+    @ProtoNumber(DailyContextCodecV1.TAG_IS_NAPPED) val isNapped: Boolean? = null,
 ) : LocalFirstDelta
 
 

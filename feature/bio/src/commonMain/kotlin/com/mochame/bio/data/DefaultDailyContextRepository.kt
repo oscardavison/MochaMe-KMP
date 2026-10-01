@@ -2,7 +2,7 @@ package com.mochame.bio.data
 
 import co.touchlab.kermit.Logger
 import com.mochame.bio.domain.DailyContext
-import com.mochame.bio.domain.DailyContextCodecRouter
+import com.mochame.bio.infrastructure.DailyContextCodecRouter
 import com.mochame.bio.domain.DailyContextRepository
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags

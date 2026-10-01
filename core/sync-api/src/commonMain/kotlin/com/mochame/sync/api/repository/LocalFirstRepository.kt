@@ -262,9 +262,6 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
     // HELPERS
     // -----------------------------------------------------------
 
-    /**
-     * Returns true if the entity is rejected.
-     */
     @PublishedApi
     internal fun shouldRejectIntent(
         existing: T?,
@@ -284,14 +281,9 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
 
         deps.hlcFactory.assertValid(existing.hlc, candidateKey)
 
-        if (op == MutationOp.DELETE) {
-            when {
-                existing.isDeleted ->
-                    return reject(candidateKey) { "Local record is already deleted (HLC: ${existing.hlc})" }
-
-                incomingHlc != null && incomingHlc <= existing.hlc ->
-                    return reject(candidateKey) { "Obsolete Remote Delete: local(${existing.hlc}) > remote($incomingHlc)" }
-            }
+        // Remote deletes MUST bypass this and return false so they can max-merge TAG_IS_DELETED.
+        if (incomingHlc == null && op == MutationOp.DELETE && existing.isDeleted) {
+            return reject(candidateKey) { "Local record is already deleted (HLC: ${existing.hlc})" }
         }
 
         return false
@@ -312,6 +304,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
         changedMask: Long,
         persistAction: suspend () -> Long,
     ): Long {
+        // TODO: this is redundant on deletions now that the ChangedMask exists
         val payload = codec.routedEncode(stampedState, existingState)
 
         val summary = changedMask.toTagSummary(op)

@@ -1,4 +1,4 @@
-package com.mochame.sync.internal.fixtures
+package com.mochame.sync.internal.fixtures.infrastructure
 
 import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
@@ -11,7 +11,7 @@ import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodecRouter
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 
-internal class FeatureRepository(
+internal class FeatureRepositoryFixture(
     featureContext: FeatureContext,
     deps: LocalFirstDependencies,
     codecRouter: BaseFeatureCodecRouter<FeatureEntity>,

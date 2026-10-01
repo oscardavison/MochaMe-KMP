@@ -20,6 +20,7 @@ class FakeFeatureCodec(
 
         const val SUMMARIZE_PRESET = "OP:V2_SUMMARY"
         const val RECONSTRUCT_PRESET = "OP:V2_RECONSTRUCTED"
+
     }
 
     override fun encode(new: FeatureEntity, old: FeatureEntity?): ByteArray = BYTES_PRESET

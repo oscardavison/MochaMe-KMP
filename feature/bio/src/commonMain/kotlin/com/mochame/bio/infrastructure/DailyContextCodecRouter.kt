@@ -1,6 +1,7 @@
-package com.mochame.bio.domain
+package com.mochame.bio.infrastructure
 
 import co.touchlab.kermit.Logger
+import com.mochame.bio.domain.DailyContext
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodecRouter

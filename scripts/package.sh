@@ -56,11 +56,12 @@ EOF
 trap apply_remote_config EXIT
 
 # ------------------------------------------------------------------------------
-# 1. Staging & Dist Dirs
+# 1. Clean and Setup Staging
 # ------------------------------------------------------------------------------
 info "Cleaning previous build staging and dist directories..."
 rm -rf "${DIST_DIR}" "${CLI_STAGE}" /tmp/deb-patch-*
-mkdir -p "${DIST_DIR}" "${CLI_STAGE}/usr/local/bin" "${CLI_STAGE}/DEBIAN"
+
+mkdir -p "${DIST_DIR}" "${CLI_STAGE}/usr/bin" "${CLI_STAGE}/DEBIAN"
 
 cat << EOF > "${CLI_STAGE}/DEBIAN/control"
 Package: mochame-cli
@@ -82,14 +83,20 @@ info "Compiling Linux x64 Native CLI executable..."
 "${PROJECT_ROOT}/gradlew" :app:entry:linuxCliApp:linkReleaseExecutableLinuxX64
 
 CLI_BIN_SRC="$(find "${PROJECT_ROOT}/app/entry/linuxCliApp/build/bin/linuxX64/releaseExecutable" -name "*.kexe" | head -n 1)"
-cp "${CLI_BIN_SRC}" "${CLI_STAGE}/usr/local/bin/mochame-cli"
-chmod 755 "${CLI_STAGE}/usr/local/bin/mochame-cli"
 
+# Copy the compiled binary into the .deb staging path
+cp "${CLI_BIN_SRC}" "${CLI_STAGE}/usr/bin/mochame-cli"
+chmod 755 "${CLI_STAGE}/usr/bin/mochame-cli"
+
+# Debian package - installs into /usr/bin/mochame-cli via apt/dpkg
 info "Building mochame-cli_${VERSION}_amd64.deb..."
 dpkg-deb --build "${CLI_STAGE}" "${DIST_DIR}/mochame-cli_${VERSION}_amd64.deb"
 
+# Tarball - packs the binary directly from usr/bin
 info "Building mochame-cli-${VERSION}-linux-x64.tar.gz..."
-tar -czvf "${DIST_DIR}/mochame-cli-${VERSION}-linux-x64.tar.gz" -C "${CLI_STAGE}/usr/local/bin" mochame-cli
+tar -czvf "${DIST_DIR}/mochame-cli-${VERSION}-linux-x64.tar.gz" -C "${CLI_STAGE}/usr/bin" mochame-cli
+
+success "CLI packaging complete. Artifacts written to ${DIST_DIR}"
 
 # ------------------------------------------------------------------------------
 # 3. Package JVM Desktop App (Remote Config)
