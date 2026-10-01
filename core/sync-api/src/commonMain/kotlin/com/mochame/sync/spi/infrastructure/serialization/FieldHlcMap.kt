@@ -77,6 +77,20 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
         return HLC(ts = ts, count = count, nodeId = nodeId)
     }
 
+    /** True if any record other than [excludeTag] carries an HLC strictly newer than [horizon]. */
+    fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean {
+        var i = 0
+        while (i < bytes.size) {
+            val tag = bytes[i].toInt()
+            if (tag != excludeTag) {
+                val hlc = readHlcAt(i)
+                if (hlc > horizon) return true
+            }
+            i += RECORD_SIZE
+        }
+        return false
+    }
+
     companion object {
         /** Byte length of an individual tag record in the index. */
         const val RECORD_SIZE = 27

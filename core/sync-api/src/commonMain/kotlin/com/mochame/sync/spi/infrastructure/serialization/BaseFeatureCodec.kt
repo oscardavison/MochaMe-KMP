@@ -58,11 +58,11 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         const val FIRST_DOMAIN_TAG = 4
     }
 
-    // -----------------------------------------------------------------
-    // ENCODE: T -> D -> Bytes
-    // -----------------------------------------------------------------
     /**
-     * Returns null on an update operation presenting no field changes.
+     * Encodes a delta between [new] and optional [old] entity states into Protobuf bytes.
+     *
+     * Dispatches to [buildDeleteDelta] when [new] is deleted, [buildInsertDelta] when [old] is null,
+     * or [buildUpdateDelta] for sparse field updates and restorations.
      */
     @OptIn(ExperimentalSerializationApi::class)
     override fun encode(new: T, old: T?): ByteArray {
@@ -82,6 +82,12 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         }
     }
 
+    /**
+     * Decodes incoming Protobuf delta bytes and merges them against optional [existing] state.
+     *
+     * Instantiates a [FieldMergeScope] to resolve field-level LWW values, evaluates deletion
+     * status via [resolveDeleteState], and stamps the final sync header metadata.
+     */
     @OptIn(ExperimentalSerializationApi::class)
     override fun decode(
         bytes: ByteArray,
@@ -121,6 +127,13 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         ).also { logger.v { "Decoding finalized. key=${it.id}" } }
     }
 
+    /**
+     * Resolves the entity deletion state using [TAG_IS_DELETED] as an LWW register:
+     * - Explicit delete (`deltaIsDeleted == true`): Marks deleted if [incomingHlc] is newer than the recorded delete HLC.
+     * - Explicit un-delete (`deltaIsDeleted == false`): Restores active status if [incomingHlc] is newer than the recorded delete HLC.
+     * - Implicit revival (`existingIsDeleted == true`): Restores active status when an incoming upsert arrives with
+     *   an [incomingHlc] newer than the tombstone's recorded delete HLC.
+     */
     private fun FieldMergeScope.resolveDeleteState(
         deltaIsDeleted: Boolean?,
         existingIsDeleted: Boolean?,
@@ -134,7 +147,8 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
             deltaIsDeleted == true -> {
                 if (isNewer) {
                     updateTag(TAG_IS_DELETED, incomingHlc)
-                    true
+                    val hasSurvivingField = hasTagNewerThan(incomingHlc, TAG_IS_DELETED)
+                    !hasSurvivingField
                 } else {
                     existingIsDeleted ?: true
                 }
@@ -166,6 +180,13 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         }
     }
 
+    /**
+     * Resolves entity creation timestamp:
+     * - Retains existing timestamp if already present locally.
+     * - Adopts incoming timestamp on initial insert.
+     * - Uses `minOf(existing, incoming)` if both exist.
+     * - Falls back to [context] HLC timestamp if an out-of-order field delta arrives without an existing record.
+     */
     protected fun resolveCreatedAt(
         deltaCreatedAt: Long?,
         existingCreatedAt: Instant?,
@@ -199,13 +220,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
     }
 
     /**
-     * Peek (Objects no longer in memory).
-     * Extracts tags from raw bits without full value decoding.
-     * Uses source.peek().
-     *
-     *
-     * Every Protobuf message must begin with a Key.
-     * That key is an unsigned Varint.
+     * Extracts tag numbers from raw Protobuf bytes using stream inspection without full object deserialization.
      */
     override fun reconstructSummary(bytes: ByteArray): String {
         if (bytes.isEmpty()) {
@@ -248,8 +263,10 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
     }
 
     /**
-     * Computes Tags 1, 2 and 3 (id, isDeleted, createdAt)
-     * and delegates domain field diffing ([FIRST_DOMAIN_TAG]) to [computeDomainChangedTags].
+     * Computes changed tag IDs between [new] and optional [old] states.
+     *
+     * Automatically includes [TAG_IS_DELETED] on deletion state transitions, tags 1 and 3 on initial
+     * insertions, and delegates domain field diffing to [computeDomainChangedTags].
      */
     override fun computeChangedTags(new: T, old: T?): List<Int> = buildList {
         val deleteStateChange = new.isDeleted != (old?.isDeleted ?: false)
@@ -270,6 +287,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
     protected abstract fun buildInsertDelta(entity: T): D
 
     /**
+     * /** Builds a sparse update delta containing only modified fields. */
      * Feature implementation example:
      *
      * ```kotlin
@@ -311,10 +329,9 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
      *     )
      * ```
      *
-     * Limitation: If models were to incorporate extensions to the protobuf schema in future app version,
-     * the field hlc evaluation, does not extend to those additional fields, and the existing extended
-     * fields may retain their existing value. Resolving deletion would not
-     *
+     * Implementation note: When adding new fields in future schema revisions, older client versions
+     * only evaluate tags known at compile time; unknown tags will not participate in LWW evaluation.
+     * This is solvable.
      */
     protected abstract fun FieldMergeScope.mergeDomainDelta(
         delta: D,
@@ -327,5 +344,8 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         get() = this.deltaSerializer.descriptor.serialName.substringAfterLast(".")
 }
 
+/**
+ * Returns this value if it differs from [old], or null if unchanged.
+ */
 @Suppress("NOTHING_TO_INLINE")
 inline infix fun <T> T.diff(old: T): T? = if (this != old) this else null

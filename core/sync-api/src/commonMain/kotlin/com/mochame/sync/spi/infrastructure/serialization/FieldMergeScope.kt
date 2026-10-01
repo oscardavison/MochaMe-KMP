@@ -70,6 +70,9 @@ class FieldMergeScope(
         index = index.updateTag(tagId, hlc)
     }
 
+    fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean =
+        index.hasTagNewerThan(horizon, excludeTag)
+
     /**
      * Explicit reference to the current inline [ByteArray] representation.
      */

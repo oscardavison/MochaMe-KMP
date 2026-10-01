@@ -139,6 +139,87 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
+    fun offlineDeleteInterleavedWithConcurrentEditAndPostDeleteUpdate_convergesDeterministically() = runEnv {
+        setupValidContext()
+        val candidateKey = 211L
+
+        val hlc10 = TestHlcFactory.createWithOffset((-50).minutes)
+        val hlc20 = TestHlcFactory.createWithOffset((-40).minutes)
+        val hlc25 = TestHlcFactory.createWithOffset((-35).minutes)
+        val hlc30 = TestHlcFactory.createWithOffset((-30).minutes)
+
+        // 1. Initial synced state: both fields populated @ HLC 10
+        val initial = FeatureEntity(
+            id = candidateKey,
+            hlc = hlc10,
+            isDeleted = false,
+            textValue = "SLEEP_5",
+            countValue = 2
+        )
+        val (initCtx, initPayload) = makeRemoteIntent(initial, null, hlc10, MutationOp.UPSERT)
+        repo.processRemoteIntent(initCtx, initPayload)
+
+        // 2. Peer B (JVM) performs concurrent edit on countValue @ HLC 25
+        val jvmEdit = initial.copy(hlc = hlc25, countValue = 99)
+        val (editCtx, editPayload) = makeRemoteIntent(jvmEdit, initial, hlc25, MutationOp.UPSERT)
+        repo.processRemoteIntent(editCtx, editPayload)
+
+        // 3. Peer A (Android) offline delete @ HLC 20 arrives (older than JVM edit @ 25, newer than initial @ 10)
+        val offlineDelete = initial.withDeleteState(true).copy(hlc = hlc20)
+        val (delCtx, delPayload) = makeRemoteIntent(offlineDelete, initial, hlc20, MutationOp.DELETE)
+        repo.processRemoteIntent(delCtx, delPayload)
+
+        // Verify intermediate state after delete ingestion:
+        // - textValue (HLC 10 <= 20) was swept to null by the delete horizon
+        // - countValue (HLC 25 > 20) survived the delete horizon
+        // - isDeleted must NOT be true because a surviving field keeps the entity alive
+        val storedAfterDelete = repo.storedEntities[candidateKey]
+        assertNotNull(storedAfterDelete, "Entity must exist in storage")
+        assertFalse(
+            storedAfterDelete.isDeleted,
+            "Surviving field write at HLC 25 must prevent entity from being marked deleted"
+        )
+        assertNull(
+            storedAfterDelete.textValue,
+            "Pre-delete field value at HLC 10 must be swept to null by delete horizon at HLC 20"
+        )
+        assertEquals(
+            99,
+            storedAfterDelete.countValue,
+            "Concurrent field write at HLC 25 must survive the delete horizon at HLC 20"
+        )
+
+        // 4. Peer A (Android) post-delete update arrives @ HLC 30 updating textValue
+        val androidUpdate = initial.copy(
+            hlc = hlc30,
+            textValue = "READINESS_3",
+            countValue = null
+        )
+        val (updateCtx, updatePayload) = makeRemoteIntent(androidUpdate, offlineDelete, hlc30, MutationOp.UPSERT)
+        repo.processRemoteIntent(updateCtx, updatePayload)
+
+        // 5. Final state verification across both fields
+        val finalStored = repo.storedEntities[candidateKey]
+        assertNotNull(finalStored, "Final entity must exist in storage")
+        assertFalse(finalStored.isDeleted, "Entity must remain active")
+        assertEquals(
+            "READINESS_3",
+            finalStored.textValue,
+            "Post-delete edit at HLC 30 must be applied"
+        )
+        assertEquals(
+            99,
+            finalStored.countValue,
+            "Concurrent edit from JVM at HLC 25 must not be lost or flipped"
+        )
+        assertEquals(
+            hlc30,
+            finalStored.hlc,
+            "Root entity HLC must advance to the latest edit"
+        )
+    }
+
+    @Test
     fun fieldLessRestore_revivesEntityViaStructuralWitnessTags() = runEnv {
         setupValidContext()
         val candidateKey = 208L
