@@ -1,10 +1,14 @@
 # MochaMe-KMP
+## v0.1.0
 
-This project is an exploration into Kotlin Multiplatform. The goal is to build a decoupled, privacy-centric, local-first synchronization system capable of being deployed across platforms using minimal platform-specific boilerplate, exposing a lightweight module of contracts for any implementing features, with the application incorporating swappable edge AI inference. The centerpiece of this architecture is platform testability - utilizing Gradle and Koin.
+<img src="/docs/images/readme_applogo.webp" alt="app logo">
 
 ---
 
 <details>
+
+Needs Updating
+
 <summary><b> Local First Architecture </b></summary>
 
 <br>
@@ -134,6 +138,8 @@ Needs Updating but general idea:
 <summary><b> AI Approach for Development </b></summary>
 
 #### AI Usage Aim:
+
+Needs Updating
 
 Different contexts assigned roles attempting to achieve domain specialization and cross verification.
 This has sort of changed to a standard verifier and architect context between Claude and Gemini with some Antigravity CLI usage.
@@ -361,18 +367,3 @@ Needs changing
 </details>
 
 ---
-
-<details>
-<summary><b> [UnderstandAnything] Visual Tour of the Codebase: </b></summary>
-
-<br>
-
-Follow the installation script directly from the repository:
-- [Understand-Anything Installation Guide](https://github.com/Lum1104/Understand-Anything.git)
-
-Open the terminal inside the project root directory and run (**NOTE this last cost me 9p!**):
-```bash
-   understand-dashboard
-```
-
-</details>
