@@ -109,7 +109,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
 
         val createdAt = resolveCreatedAt(delta.createdAt, existing?.createdAt, context)
         val mergedDomain = scope.mergeDomainDelta(delta, context, existing)
-        val deleteState = scope.resolveDeleteState(isDelete, delta.id)
+        val deleteState = scope.resolveDeleteState(delta.isDeleted, existing?.isDeleted, delta.id)
 
         val headerHlc = existing?.hlc?.takeIf { it > context.hlc } ?: context.hlc
         return mergedDomain.withSyncHeader(
@@ -121,12 +121,49 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         ).also { logger.v { "Decoding finalized. key=${it.id}" } }
     }
 
-    private fun FieldMergeScope.resolveDeleteState(isDeleteDelta: Boolean, key: Long): Boolean {
-        if (isDeleteDelta) stampIfNewer(TAG_IS_DELETED)
-        val horizon = getTagHlc(TAG_IS_DELETED) ?: return false
-        val revived = hasTagNewerThan(horizon, TAG_IS_DELETED)
-        logger.v { "Delete state [key=$key] horizon=$horizon revived=$revived" }
-        return !revived
+    private fun FieldMergeScope.resolveDeleteState(
+        deltaIsDeleted: Boolean?,
+        existingIsDeleted: Boolean?,
+        candidateKey: Long
+    ): Boolean {
+        val lastDeleteHlc = getTagHlc(TAG_IS_DELETED)
+        val isNewer = lastDeleteHlc == null || incomingHlc > lastDeleteHlc
+
+        return when {
+            // Explicit delete intent
+            deltaIsDeleted == true -> {
+                if (isNewer) {
+                    updateTag(TAG_IS_DELETED, incomingHlc)
+                    true
+                } else {
+                    existingIsDeleted ?: true
+                }
+            }
+
+            // Explicit un-delete intent (e.g., CLI or UI toggling isDeleted back to false)
+            deltaIsDeleted == false -> {
+                if (isNewer) {
+                    updateTag(TAG_IS_DELETED, incomingHlc)
+                    logger.i { "Restored [key=$candidateKey]: explicit restore (HLC=$incomingHlc) overrides delete (HLC=$lastDeleteHlc)" }
+                    false
+                } else {
+                    existingIsDeleted ?: false
+                }
+            }
+
+            // Implicit revival: Incoming upsert arrives against an existing tombstone
+            existingIsDeleted == true -> {
+                if (isNewer) {
+                    updateTag(TAG_IS_DELETED, incomingHlc)
+                    logger.i { "Restored [key=$candidateKey]: incoming edit (HLC=$incomingHlc) overrides delete (HLC=$lastDeleteHlc)" }
+                    false
+                } else {
+                    true
+                }
+            }
+
+            else -> false
+        }
     }
 
     protected fun resolveCreatedAt(

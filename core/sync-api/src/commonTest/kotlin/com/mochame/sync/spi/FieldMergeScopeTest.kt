@@ -147,7 +147,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
 
     @Test
     fun should_correctlyAggregateBinaryResultBlob_when_mergingMixedFields() = runEnv {
-        // Given: Initial blob with Tag 1 at ts=100 and Tag 2 at ts=500
+        // Given
         val hlcTag1 = createHlc(ts = 100L)
         val hlcTag2 = createHlc(ts = 500L)
         val initialBytes = FieldHlcMap.EMPTY
@@ -155,7 +155,6 @@ class FieldMergeScopeTest : MochaPlatformTest() {
             .updateTag(tagId = 2, hlc = hlcTag2)
             .bytes
 
-        // Incoming HLC is ts = 300 (Beats Tag 1, loses to Tag 2, and new for Tag 3)
         val incomingHlc = createHlc(ts = 300L)
         val scope = FieldMergeScope(
             existingBytes = initialBytes,
@@ -164,27 +163,11 @@ class FieldMergeScopeTest : MochaPlatformTest() {
             logger
         )
 
-        // When: Evaluate across 4 fields
-        val field1 = scope.eval(
-            tagId = 1,
-            incomingVal = "val1_new",
-            existingVal = "val1_old"
-        ) // ts 300 > 100 -> Wins
-        val field2 = scope.eval(
-            tagId = 2,
-            incomingVal = "val2_new",
-            existingVal = "val2_old"
-        ) // ts 300 < 500 -> Loses
-        val field3 = scope.eval(
-            tagId = 3,
-            incomingVal = "val3_new",
-            existingVal = "val3_old"
-        ) // New tag -> Wins
-        val field4 = scope.eval(
-            tagId = 4,
-            incomingVal = null,
-            existingVal = "val4_old"
-        ) // Null -> Retains
+        // When
+        val field1 = scope.eval(tagId = 1, incomingVal = "val1_new", existingVal = "val1_old")
+        val field2 = scope.eval(tagId = 2, incomingVal = "val2_new", existingVal = "val2_old")
+        val field3 = scope.eval(tagId = 3, incomingVal = "val3_new", existingVal = "val3_old")
+        val field4 = scope.eval(tagId = 4, incomingVal = null, existingVal = "val4_old")
 
         // Then
         assertEquals("val1_new", field1)
@@ -192,7 +175,6 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         assertEquals("val3_new", field3)
         assertEquals("val4_old", field4)
 
-        // Then: Blob contains exactly 3 tags (Tag 1 updated, Tag 2 retained, Tag 3 appended, Tag 4 ignored)
         val resultBlob = scope.buildResultBlob()
         assertEquals(FieldHlcMap.RECORD_SIZE * 3, resultBlob.size)
 
@@ -202,6 +184,65 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         assertEquals(incomingHlc, resultMap.getHlc(tagId = 3))
         assertNull(resultMap.getHlc(tagId = 4))
         writer.assertFieldRejectionLogCount(1)
+    }
+
+    // ===================================================================
+    // DELETION SWEEP
+    // ===================================================================
+
+    @Test
+    fun should_sweepOlderFieldsToNullAndRetainNewerFields_when_deltaIsDeletion() = runEnv {
+        // Given
+        val olderHlc = createHlc(ts = 100L)
+        val newerHlc = createHlc(ts = 500L)
+        val existingBytes = FieldHlcMap.EMPTY
+            .updateTag(tagId = 1, hlc = olderHlc)
+            .updateTag(tagId = 2, hlc = newerHlc)
+            .bytes
+
+        val deleteHlc = createHlc(ts = 300L)
+        val scope = FieldMergeScope(
+            existingBytes = existingBytes,
+            incomingHlc = deleteHlc,
+            changedMask = 0L,
+            logger = logger,
+            isDelete = true
+        )
+
+        // When
+        val sweptField = scope.eval(tagId = 1, incomingVal = null, existingVal = "activeValue")
+        val survivingField = scope.eval(tagId = 2, incomingVal = null, existingVal = "recentValue")
+        val unrecordedField = scope.eval(tagId = 3, incomingVal = null, existingVal = "untrackedValue")
+
+        // Then
+        assertNull(sweptField)
+        assertEquals("recentValue", survivingField)
+        assertNull(unrecordedField)
+
+        assertEquals(deleteHlc, scope.getTagHlc(tagId = 1))
+        assertEquals(newerHlc, scope.getTagHlc(tagId = 2))
+        assertEquals(deleteHlc, scope.getTagHlc(tagId = 3))
+        assertEquals(FieldHlcMap.RECORD_SIZE * 3, scope.buildResultBlob().size)
+    }
+
+    // ===================================================================
+    // EXPLICIT TAG MUTATION
+    // ===================================================================
+
+    @Test
+    fun should_updateTagDirectlyInIndex_when_invokingUpdateTag() = runEnv {
+        // Given
+        val initialHlc = createHlc(ts = 100L)
+        val updatedHlc = createHlc(ts = 400L)
+        val existingBytes = FieldHlcMap.EMPTY.updateTag(tagId = 2, hlc = initialHlc).bytes
+        val scope = FieldMergeScope(existingBytes, incomingHlc = initialHlc, changedMask = 0L, logger)
+
+        // When
+        scope.updateTag(tagId = 2, hlc = updatedHlc)
+
+        // Then
+        assertEquals(updatedHlc, scope.getTagHlc(tagId = 2))
+        assertEquals(FieldHlcMap.RECORD_SIZE, scope.buildResultBlob().size)
     }
 
 }

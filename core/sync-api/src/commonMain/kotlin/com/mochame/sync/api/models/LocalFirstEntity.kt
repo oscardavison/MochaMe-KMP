@@ -25,7 +25,7 @@ interface LocalFirstEntity<T : LocalFirstEntity<T>> {
     val lastModified: Long
 
     fun withHlcMetadata(hlc: HLC, fieldBlob: ByteArray): T
-    fun withDeleteState(state: Boolean): T
+    fun withDeleteState(isDeleted: Boolean): T
     fun withSyncHeader(
         hlc: HLC,
         lastModified: Long,

@@ -5,6 +5,8 @@ import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.di.infrastructure.ClientWebSocketTransportTestEnv
 import com.mochame.sync.di.infrastructure.TransportTestModule
+import com.mochame.sync.infrastructure.ClientWebSocketTransport.Companion.FAST_RECONNECT_DELAY
+import com.mochame.sync.infrastructure.ClientWebSocketTransport.Companion.STANDARD_RECONNECT_DELAY
 import com.mochame.sync.spi.network.NetworkConfig
 import com.mochame.sync.spi.network.SendResult
 import com.mochame.sync.spi.network.WireFrame
@@ -689,7 +691,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
             // Then: Connection loop restarts and establishes a new session
             assertTrue(transport.isConnected)
             assertTrue(engine.sessionChannel.tryReceive().isSuccess)
-            assertTrue(scope.testScheduler.currentTime < 10.seconds.inWholeMilliseconds)
+            assertTrue(scope.testScheduler.currentTime < FAST_RECONNECT_DELAY.inWholeMilliseconds)
 
             teardown()
         }
@@ -707,7 +709,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         assertTrue(engine.sessionChannel.isEmpty)
 
         // When: Advance time during backoff: no reconnection should happen before 10s
-        scope.advanceTimeBy(9.seconds)
+        scope.advanceTimeBy(FAST_RECONNECT_DELAY - 1.seconds)
         scope.runCurrent()
         assertFalse(transport.isConnected)
         assertTrue(engine.sessionChannel.isEmpty)
@@ -739,7 +741,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         assertFalse(transport.isConnected)
 
         // And: Advance virtual time to retry window
-        scope.advanceTimeBy(10.seconds)
+        scope.advanceTimeBy(FAST_RECONNECT_DELAY)
         scope.runCurrent()
 
         // Then: Verify a new session is created and handshake completes
@@ -769,7 +771,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         assertFalse(transport.isConnected)
 
         // And: Advance virtual time to 29s (below 30s clean close window)
-        scope.advanceTimeBy(29.seconds)
+        scope.advanceTimeBy(STANDARD_RECONNECT_DELAY - 1.seconds)
         scope.runCurrent()
         assertFalse(transport.isConnected)
         assertTrue(engine.sessionChannel.isEmpty)
@@ -805,7 +807,7 @@ class ClientWebSocketTransportTest : MochaPlatformTest() {
         assertFalse(transport.isConnected)
 
         // And: Advance virtual time to 10s retry window
-        scope.advanceTimeBy(10.seconds)
+        scope.advanceTimeBy(FAST_RECONNECT_DELAY)
         scope.runCurrent()
 
         // Then: Verify a new session is created and handshake completes

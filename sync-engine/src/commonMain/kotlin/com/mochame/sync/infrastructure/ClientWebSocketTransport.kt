@@ -20,6 +20,7 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.pingInterval
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.http.URLProtocol
+import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
@@ -64,6 +65,11 @@ internal class ClientWebSocketTransport(
 
     private val logger =
         logger.withTags(LogTags.Layer.TRANSPORT, LogTags.Domain.SYNC, "ClSock")
+
+    companion object {
+        val FAST_RECONNECT_DELAY = 5.seconds
+        val STANDARD_RECONNECT_DELAY = 10.seconds
+    }
 
     private val client = HttpClient(engine) {
         install(WebSockets) {
@@ -269,27 +275,37 @@ internal class ClientWebSocketTransport(
                     }
 
                     if (isActive && !isPaused.value) {
-                        logger.i { "WebSocket channel closed. Attempting reconnection in 30s..." }
-                        awaitReconnect(30.seconds)
+                        logger.i { "WebSocket channel closed. Attempting reconnection in $STANDARD_RECONNECT_DELAY..." }
+                        awaitReconnect(STANDARD_RECONNECT_DELAY)
                     }
 
                 } catch (e: CancellationException) {
-                    throw e
+                    if (!currentCoroutineContext().isActive || isPaused.value) {
+                        throw e
+                    }
+                    logger.w(e) { "Internal WebSocket cancellation during network drop. Reconnecting in $FAST_RECONNECT_DELAY..." }
+                    awaitReconnect(FAST_RECONNECT_DELAY)
+
                 } catch (e: Exception) {
-                    when (e) {
+                    val delay = when (e) {
                         is IOException -> {
-                            logger.d(e) { "Network transport failure: ${e.message}. Retrying in 10s..." }
-                            awaitReconnect(10.seconds)
+                            logger.d(e) { "Network transport failure: ${e.message}. Retrying in $FAST_RECONNECT_DELAY..." }
+                            FAST_RECONNECT_DELAY
                         }
 
                         is ClosedReceiveChannelException, is ClosedSendChannelException -> {
-                            logger.w(e) { "Channel closure. Retrying in 10s..." }
-                            awaitReconnect(10.seconds)
+                            logger.w(e) { "Channel closure. Retrying in $FAST_RECONNECT_DELAY..." }
+                            FAST_RECONNECT_DELAY
                         }
 
                         is ResponseException, is WebSocketException -> {
-                            logger.w(e) { "Handshake HTTP error [${e.message}]. Retrying in 10s..." }
-                            awaitReconnect(10.seconds)
+                            logger.w(e) { "Handshake HTTP error [${e.message}]. Retrying in $STANDARD_RECONNECT_DELAY..." }
+                            STANDARD_RECONNECT_DELAY
+                        }
+
+                        is UnresolvedAddressException -> {
+                            logger.w(e) { "Host resolution failed (no connection). Retrying in $STANDARD_RECONNECT_DELAY..." }
+                            STANDARD_RECONNECT_DELAY
                         }
 
                         else -> {
@@ -297,6 +313,8 @@ internal class ClientWebSocketTransport(
                             break
                         }
                     }
+
+                    awaitReconnect(delay)
                 }
             }
         }

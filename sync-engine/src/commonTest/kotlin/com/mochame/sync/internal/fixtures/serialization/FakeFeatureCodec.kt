@@ -1,8 +1,6 @@
 package com.mochame.sync.internal.fixtures.serialization
 
-import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
 import com.mochame.sync.spi.infrastructure.serialization.FeatureCodec
 import com.mochame.sync.spi.models.DecodeContext
 import org.koin.core.annotation.Single

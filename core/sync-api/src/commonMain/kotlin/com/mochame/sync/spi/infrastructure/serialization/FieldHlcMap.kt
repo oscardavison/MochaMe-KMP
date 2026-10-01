@@ -10,9 +10,10 @@ import kotlin.jvm.JvmInline
 import kotlin.uuid.Uuid
 
 /**
- * Inlines the [bytes] property. Immutable, defining the CRDT structure at the field level for LWW.
+ * Immutable binary index mapping Protobuf field tag numbers to their last-modified [HLC].
  *
- * |ProtoTag(1 Byte)|Timestamp(8 Bytes)|Count(2 Bytes)|NodeId(16 Bytes) - 27 Bytes per field.
+ * Backed by a contiguous [ByteArray] composed of fixed 27-byte records:
+ * `| tagId (1B) | timestamp (8B) | logical count (2B) | nodeId (16B) |`
  */
 @JvmInline
 @PublishedApi
@@ -24,6 +25,9 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
         }
     }
 
+    /**
+     * Returns the [HLC] recorded for [tagId], or `null` if the tag has not been recorded.
+     */
     fun getHlc(tagId: Int): HLC? {
         require(tagId in 0..127)
 
@@ -31,6 +35,9 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
         return readHlcAt(index)
     }
 
+    /**
+     * Returns a new [FieldHlcMap] with [tagId] updated in place or appended at [hlc].
+     */
     fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap {
         require(tagId in 0..127)
 
@@ -60,25 +67,6 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
         return null
     }
 
-    /** True if any record other than [excludeTag] carries an HLC strictly newer than [horizon]. */
-    fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean {
-        var i = 0
-        while (i < bytes.size) {
-            val tag = bytes[i].toInt()
-            if (tag != excludeTag) {
-                val hlc = readHlcAt(i)
-                if (hlc > horizon) return true
-            }
-            i += RECORD_SIZE
-        }
-        return false
-    }
-
-    fun withoutTag(tagId: Int): FieldHlcMap {
-        val i = findTagIndex(tagId) ?: return this
-        return FieldHlcMap(bytes.copyOfRange(0, i) + bytes.copyOfRange(i + RECORD_SIZE, bytes.size))
-    }
-
     private fun readHlcAt(offset: Int): HLC {
         val ts = bytes.readLongAt(offset + 1)
         val count = bytes.readUShortAt(offset + 9)
@@ -90,7 +78,9 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
     }
 
     companion object {
+        /** Byte length of an individual tag record in the index. */
         const val RECORD_SIZE = 27
+        /** Default empty index containing zero tag records. */
         val EMPTY = FieldHlcMap(ByteArray(0))
     }
 }

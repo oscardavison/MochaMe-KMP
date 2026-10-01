@@ -124,7 +124,7 @@ fun Route.syncRelayRoute(
             logger.i { "Session cancelled for node '$nodeId'" }
             throw e
         } catch (e: Exception) {
-            logger.e(e) { "Session error for node '$nodeId' in group '$groupId':${e.message}" }
+            logger.d { "Closing session for node '$nodeId' in group '$groupId':${e.message}" }
             relayManager.terminate(sessionHandle, INTERNAL_ERROR, e.message ?: "Unhandled error")
         } finally {
             relayManager.terminate(sessionHandle, CloseReason.Codes.NORMAL, "Closed connection")

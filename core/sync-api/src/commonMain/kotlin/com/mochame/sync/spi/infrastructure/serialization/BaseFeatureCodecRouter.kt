@@ -1,7 +1,6 @@
 package com.mochame.sync.spi.infrastructure.serialization
 
 import co.touchlab.kermit.Logger
-import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
 import com.mochame.sync.spi.infrastructure.getCodec
 import com.mochame.sync.spi.infrastructure.latestCodec

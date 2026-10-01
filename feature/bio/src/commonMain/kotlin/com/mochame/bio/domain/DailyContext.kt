@@ -24,7 +24,16 @@ data class DailyContext(
     override fun withHlcMetadata(hlc: HLC, fieldBlob: ByteArray): DailyContext =
         copy(hlc = hlc, lastModified = hlc.ts, fieldHlcs = fieldBlob)
 
-    override fun withDeleteState(state: Boolean) = copy(isDeleted = state)
+    override fun withDeleteState(isDeleted: Boolean): DailyContext = if (isDeleted) {
+        copy(
+            isDeleted = true,
+            sleepHours = null,
+            readinessScore = null,
+            isNapped = null
+        )
+    } else {
+        copy(isDeleted = false)
+    }
 
     override fun withSyncHeader(
         hlc: HLC,

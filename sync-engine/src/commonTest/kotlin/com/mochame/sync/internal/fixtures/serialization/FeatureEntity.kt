@@ -24,7 +24,16 @@ data class FeatureEntity(
         lastModified = hlc.ts,
         fieldHlcs = fieldBlob
     )
-    override fun withDeleteState(state: Boolean): FeatureEntity = copy(isDeleted = state)
+
+    override fun withDeleteState(isDeleted: Boolean) = if (isDeleted) {
+        copy(
+            isDeleted = true,
+            textValue = null,
+            countValue = null
+        )
+    } else {
+        copy(isDeleted = false)
+    }
 
     override fun withSyncHeader(
         hlc: HLC,
@@ -62,7 +71,7 @@ fun FeatureEntity.assertDecodeParity(original: FeatureEntity, upsertHlc: HLC? = 
     assertEquals(original.countValue, this.countValue)
     assertEquals(original.createdAt, this.createdAt)
 
-    upsertHlc?.let{
+    upsertHlc?.let {
         assertEquals(it, this.hlc)
         assertEquals(it.ts, this.lastModified)
     } ?: {
