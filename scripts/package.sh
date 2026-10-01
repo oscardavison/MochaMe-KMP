@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="0.1.0"
 DIST_DIR="${PROJECT_ROOT}/dist"
+SERVER_BUILD_DIST="${PROJECT_ROOT}/server/build/distributions"
 CLI_STAGE="${PROJECT_ROOT}/build/staging/mochame-cli-pkg"
 
 info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
@@ -60,6 +61,7 @@ trap apply_remote_config EXIT
 # ------------------------------------------------------------------------------
 info "Cleaning previous build staging and dist directories..."
 rm -rf "${DIST_DIR}" "${CLI_STAGE}" /tmp/deb-patch-*
+rm -rf "${SERVER_BUILD_DIST}"
 
 mkdir -p "${DIST_DIR}" "${CLI_STAGE}/usr/bin" "${CLI_STAGE}/DEBIAN"
 
@@ -133,11 +135,25 @@ cp "${APK_SRC}" "${DIST_DIR}/mochame-v${VERSION}-release.apk"
 # ------------------------------------------------------------------------------
 # 5. Package Server Archive
 # ------------------------------------------------------------------------------
-info "Packaging Server distribution archive..."
-"${PROJECT_ROOT}/gradlew" :server:distZip
+info "Packaging Server distribution archives..."
 
-SERVER_ZIP_SRC="$(find "${PROJECT_ROOT}/server/build/distributions" -name "*.zip" | head -n 1)"
-cp "${SERVER_ZIP_SRC}" "${DIST_DIR}/server-${VERSION}.zip"
+"${PROJECT_ROOT}/gradlew" :server:installDist :server:distZip
+
+SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
+if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
+    echo -e "\033[1;31m[ERROR]\033[0m Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}" >&2
+    exit 1
+fi
+
+info "Compressing flat server archive into ${DIST_DIR}/server-${VERSION}.tar.gz..."
+tar -czf "${DIST_DIR}/server-${VERSION}.tar.gz" -C "${SERVER_INSTALL_DIR}" .
+
+zip_src="$(find "${SERVER_BUILD_DIST}" -maxdepth 1 -name "*.zip" -print -quit)"
+if [[ -z "${zip_src}" || ! -f "${zip_src}" ]]; then
+    echo -e "\033[1;31m[ERROR]\033[0m Server .zip not found in ${SERVER_BUILD_DIST}" >&2
+    exit 1
+fi
+cp "${zip_src}" "${DIST_DIR}/server-${VERSION}.zip"
 
 success "Package pipeline completed. All distribution artifacts staged:"
 ls -lh "${DIST_DIR}"

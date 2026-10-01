@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ------------------------------------------------------------------------------
+# Configuration & Paths
+# ------------------------------------------------------------------------------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION="0.1.0"
+DIST_DIR="${PROJECT_ROOT}/dist"
+DIST_ARCHIVE="${DIST_DIR}/server-${VERSION}.tar.gz"
+
 SSH_KEY="${HOME}/.ssh/mochame-relay_key.pem"
 AZURE_HOST="azureuser@9.160.35.162"
 
@@ -17,27 +24,39 @@ fi
 # ------------------------------------------------------------------------------
 # 1. Local Build & Packaging
 # ------------------------------------------------------------------------------
-info "Compiling locally..."
-"${PROJECT_ROOT}/gradlew" :server:installDist
+if [[ -f "${DIST_ARCHIVE}" ]]; then
+    info "Found pre-built server distribution at: ${DIST_ARCHIVE}"
+    PAYLOAD_ARCHIVE="${DIST_ARCHIVE}"
+    CLEANUP_TEMP=false
+else
+    info "No pre-built archive in dist/. Compiling locally..."
+    "${PROJECT_ROOT}/gradlew" :server:installDist
 
-SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
+    SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
 
-if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
-    err "Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}"
-    exit 1
+    if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
+        err "Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}"
+        exit 1
+    fi
+
+    TEMP_ARCHIVE="/tmp/server-dist.tar.gz"
+
+    info "Compressing server binaries into tarball..."
+    tar -czf "${TEMP_ARCHIVE}" -C "${SERVER_INSTALL_DIR}" .
+
+    PAYLOAD_ARCHIVE="${TEMP_ARCHIVE}"
+    CLEANUP_TEMP=true
 fi
-
-TEMP_ARCHIVE="/tmp/server-dist.tar.gz"
-
-info "Compressing server binaries into tarball..."
-tar -czf "${TEMP_ARCHIVE}" -C "${SERVER_INSTALL_DIR}" .
 
 # ------------------------------------------------------------------------------
 # 2. Transfer Payload & Dockerfile to Azure
 # ------------------------------------------------------------------------------
 info "Uploading server archive and Dockerfile..."
-scp -i "${SSH_KEY}" "${TEMP_ARCHIVE}" "${AZURE_HOST}:/tmp/server-dist.tar.gz"
-rm -f "${TEMP_ARCHIVE}"
+scp -i "${SSH_KEY}" "${PAYLOAD_ARCHIVE}" "${AZURE_HOST}:/tmp/server-dist.tar.gz"
+
+if [[ "${CLEANUP_TEMP}" == true ]]; then
+    rm -f "${TEMP_ARCHIVE}"
+fi
 
 if [[ -f "${PROJECT_ROOT}/server/Dockerfile" ]]; then
     scp -i "${SSH_KEY}" "${PROJECT_ROOT}/server/Dockerfile" "${AZURE_HOST}:~/mochame/server/Dockerfile"
