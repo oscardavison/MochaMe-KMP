@@ -1,19 +1,52 @@
 package com.mochame.utils.ui
 
-object InputSanitizer {
-    private val MULTI_SPACE_REGEX = Regex("\\s+")
+import kotlin.jvm.JvmInline
 
+object InputSanitizer {
+    private val HORIZONTAL_SPACE_REGEX = Regex("[^\\S\\r\\n]+") // Matches spaces/tabs but NOT \r or \n
+    private val EXCESSIVE_NEWLINES_REGEX = Regex("(\\r?\\n){3,}") // Caps consecutive blank lines at 2
+
+    /**
+     * Sanitizes single-line fields (e.g. sleep duration, readiness score).
+     * Collapses all whitespace (including newlines) into a single space.
+     */
     fun sanitize(raw: String?): String? {
         if (raw == null) return null
         val cleaned = raw
             .replace('\u00A0', ' ')
             .replace('\u200B', ' ')
             .trim()
-            .replace(MULTI_SPACE_REGEX, " ")
+            .replace(Regex("\\s+"), " ")
 
         return cleaned.ifBlank { null }
     }
+
+    /**
+     * Sanitizes multi-line notes.
+     * Preserves intentional line breaks while stripping invisible characters
+     * and collapsing run-away horizontal spaces.
+     */
+    fun sanitizeMultiline(raw: String?): String? {
+        if (raw == null) return null
+        val cleaned = raw
+            .replace('\u00A0', ' ')
+            .replace('\u200B', ' ')
+            .replace("\r\n", "\n")
+            .replace(HORIZONTAL_SPACE_REGEX, " ")
+            .lines()
+            .map { it.trim() }
+            .joinToString("\n")
+            .replace(EXCESSIVE_NEWLINES_REGEX, "\n\n")
+            .trim()
+
+        return cleaned.ifBlank { null }
+    }
+
 }
+
+/** Inline value wrapper to differentiate between "No input / Valid Null" vs "Failed Validation" */
+@JvmInline
+value class ParsedInput<T>(val value: T?)
 
 object PrimitiveParsers {
 

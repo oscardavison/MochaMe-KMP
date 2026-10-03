@@ -13,6 +13,7 @@ class SaveDailyContextUseCase(
         epochDay: Long,
         sleepHours: Update<Double> = Update.Unchanged,
         readinessScore: Update<Int> = Update.Unchanged,
+        notes: Update<String> = Update.Unchanged,
         isNapped: Update<Boolean> = Update.Unchanged
     ): Result<Unit> = runCatchingCancellable {
         val existing = repository.getContext(epochDay)
@@ -21,6 +22,7 @@ class SaveDailyContextUseCase(
             id = epochDay,
             sleepHours = sleepHours.resolve(existing?.sleepHours),
             readinessScore = readinessScore.resolve(existing?.readinessScore),
+            notes = notes.resolve(existing?.notes),
             isNapped = isNapped.resolve(existing?.isNapped)
         )
 

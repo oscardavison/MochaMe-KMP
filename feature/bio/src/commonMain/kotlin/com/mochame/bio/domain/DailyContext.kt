@@ -19,6 +19,7 @@ data class DailyContext(
     val sleepHours: Double? = null,
     val readinessScore: Int? = null,
     val isNapped: Boolean? = null,
+    val notes: String? = null
 ) : LocalFirstEntity<DailyContext> {
 
     override fun withHlcMetadata(hlc: HLC, fieldBlob: ByteArray): DailyContext =
@@ -29,7 +30,8 @@ data class DailyContext(
             isDeleted = true,
             sleepHours = null,
             readinessScore = null,
-            isNapped = null
+            isNapped = null,
+            notes = null
         )
     } else {
         copy(isDeleted = false)
@@ -60,7 +62,8 @@ data class DailyContext(
                 fieldHlcs.contentEquals(other.fieldHlcs) &&
                 sleepHours == other.sleepHours &&
                 readinessScore == other.readinessScore &&
-                isNapped == other.isNapped
+                isNapped == other.isNapped &&
+                notes == other.notes
     }
 
     override fun hashCode(): Int {
@@ -70,9 +73,10 @@ data class DailyContext(
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + lastModified.hashCode()
         result = 31 * result + fieldHlcs.contentHashCode()
-        result = 31 * result + (sleepHours?.hashCode() ?: 0)
-        result = 31 * result + (readinessScore?.hashCode() ?: 0)
-        result = 31 * result + (isNapped?.hashCode() ?: 0)
+        result = 31 * result + sleepHours.hashCode()
+        result = 31 * result + readinessScore.hashCode()
+        result = 31 * result + isNapped.hashCode()
+        result = 31 * result + notes.hashCode()
         return result
     }
 }

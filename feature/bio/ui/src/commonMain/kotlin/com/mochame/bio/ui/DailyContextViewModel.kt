@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.mochame.bio.domain.DailyContextRepository
 import com.mochame.bio.domain.SaveDailyContextUseCase
 import com.mochame.utils.runCatchingCancellable
+import com.mochame.utils.ui.InputSanitizer
+import com.mochame.utils.ui.ParsedInput
 import com.mochame.utils.ui.PrimitiveParsers
 import com.mochame.utils.ui.Update
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +42,7 @@ class DailyContextViewModel(
             epochDay = epochDay,
             sleepHoursInput = inputs.sleep ?: entity?.sleepHours?.toString().orEmpty(),
             readinessScoreInput = inputs.readiness ?: entity?.readinessScore?.toString().orEmpty(),
+            notesInput = inputs.notes ?: entity?.notes.orEmpty(),
             isNapped = inputs.isNapped ?: entity?.isNapped ?: false,
             isLoading = false,
             isSaving = saving,
@@ -58,6 +62,9 @@ class DailyContextViewModel(
             is DailyContextIntent.UpdateReadinessInput ->
                 userInputs.update { it.copy(readiness = intent.input) }
 
+            is DailyContextIntent.UpdateNotesInput ->
+                userInputs.update { it.copy(notes = intent.input) }
+
             is DailyContextIntent.ToggleNapped ->
                 userInputs.update { it.copy(isNapped = intent.isNapped) }
 
@@ -68,52 +75,71 @@ class DailyContextViewModel(
     }
 
     private fun performSave() {
-        viewModelScope.launch {
-            val snapshotInputs = userInputs.value
-            val errors = mutableListOf<String>()
+        val snapshot = userInputs.value
+        if (!snapshot.hasChanges) return
 
-            val parsedSleep = snapshotInputs.sleep?.let {
-                PrimitiveParsers.parseBoundedDouble(it, 0.0..72.0, "Sleep Hours")
-                    .onFailure { err -> errors.add(err.message.orEmpty()) }
-                    .getOrNull()
-            }
-
-            val parsedReadiness = snapshotInputs.readiness?.let {
-                PrimitiveParsers.parseBoundedInt(it, 1..5, "Readiness Score")
-                    .onFailure { err -> errors.add(err.message.orEmpty()) }
-                    .getOrNull()
-            }
-
-            if (errors.isNotEmpty()) {
-                errorMessage.value = errors.joinToString("\n")
-                return@launch
-            }
-
+        viewModelScope.launch(CoroutineName("SaveDailyContext")) {
             isSaving.value = true
-            errorMessage.value = null
+            try {
+                val parsedSleep = parseSleepOrNull(snapshot.sleep) ?: return@launch
+                val parsedReadiness = parseReadinessOrNull(snapshot.readiness) ?: return@launch
+                val cleanNotes = InputSanitizer.sanitizeMultiline(snapshot.notes)
 
-            saveUseCase(
-                epochDay = epochDay,
-                sleepHours = Update.fromParsed(snapshotInputs.sleep, parsedSleep),
-                readinessScore = Update.fromParsed(snapshotInputs.readiness, parsedReadiness),
-                isNapped = Update.fromNullable(snapshotInputs.isNapped)
-            ).fold(
-                onSuccess = {
-                    // Reset only untouched/saved fields without dropping concurrent edits
-                    userInputs.update { current ->
-                        current.copy(
-                            sleep = if (current.sleep == snapshotInputs.sleep) null else current.sleep,
-                            readiness = if (current.readiness == snapshotInputs.readiness) null else current.readiness,
-                            isNapped = if (current.isNapped == snapshotInputs.isNapped) null else current.isNapped
-                        )
+                saveUseCase(
+                    epochDay = epochDay,
+                    sleepHours = Update.fromParsed(snapshot.sleep, parsedSleep.value),
+                    readinessScore = Update.fromParsed(snapshot.readiness, parsedReadiness.value),
+                    notes = Update.fromParsed(snapshot.notes, cleanNotes),
+                    isNapped = Update.fromNullable(snapshot.isNapped)
+                ).fold(
+                    onSuccess = {
+                        userInputs.update { current ->
+                            current.copy(
+                                sleep = current.sleep.takeUnless { it == snapshot.sleep },
+                                readiness = current.readiness.takeUnless { it == snapshot.readiness },
+                                notes = current.notes.takeUnless { it == snapshot.notes },
+                                isNapped = current.isNapped.takeUnless { it == snapshot.isNapped }
+                            )
+                        }
+                    },
+                    onFailure = { error ->
+                        errorMessage.value = error.message ?: "Persistence failure."
                     }
-                },
-                onFailure = { error ->
-                    errorMessage.value = error.message ?: "Persistence failure."
-                }
-            )
-            isSaving.value = false
+                )
+            } finally {
+                isSaving.value = false
+            }
         }
+    }
+
+    private fun parseSleepOrNull(raw: String?): ParsedInput<Double>? {
+        if (raw.isNullOrBlank()) return ParsedInput(null)
+        return PrimitiveParsers.parseBoundedDouble(
+            raw = raw,
+            range = 0.0..24.0,
+            fieldName = "Sleep Duration"
+        ).fold(
+            onSuccess = { ParsedInput(it) },
+            onFailure = { error ->
+                errorMessage.value = error.message ?: "Invalid sleep duration."
+                null
+            }
+        )
+    }
+
+    private fun parseReadinessOrNull(raw: String?): ParsedInput<Int>? {
+        if (raw.isNullOrBlank()) return ParsedInput(null)
+        return PrimitiveParsers.parseBoundedInt(
+            raw = raw,
+            range = 1..5,
+            fieldName = "Readiness Score"
+        ).fold(
+            onSuccess = { ParsedInput(it) },
+            onFailure = { error ->
+                errorMessage.value = error.message ?: "Invalid readiness score."
+                null
+            }
+        )
     }
 
     private fun performDelete() {
@@ -129,4 +155,9 @@ class DailyContextViewModel(
             isSaving.value = false
         }
     }
+
+
+    private val TransientInput.hasChanges: Boolean
+        get() = sleep != null || readiness != null || notes != null || isNapped != null
+
 }

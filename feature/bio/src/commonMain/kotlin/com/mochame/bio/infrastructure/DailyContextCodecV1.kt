@@ -27,6 +27,7 @@ data class DailyContextDeltaV1(
     @ProtoNumber(DailyContextCodecV1.TAG_SLEEP_HOURS) val sleepHours: Double? = null,
     @ProtoNumber(DailyContextCodecV1.TAG_READINESS_SCORE) val readinessScore: Int? = null,
     @ProtoNumber(DailyContextCodecV1.TAG_IS_NAPPED) val isNapped: Boolean? = null,
+    @ProtoNumber(DailyContextCodecV1.TAG_NOTES) val notes: String? = null
 ) : LocalFirstDelta
 
 
@@ -45,6 +46,7 @@ class DailyContextCodecV1(
         const val TAG_SLEEP_HOURS = 4
         const val TAG_READINESS_SCORE = 5
         const val TAG_IS_NAPPED = 6
+        const val TAG_NOTES = 7
     }
 
     override fun buildDeleteDelta(entity: DailyContext) = DailyContextDeltaV1(
@@ -58,7 +60,8 @@ class DailyContextCodecV1(
         createdAt = entity.createdAt.toEpochMilliseconds(),
         sleepHours = entity.sleepHours,
         readinessScore = entity.readinessScore,
-        isNapped = entity.isNapped
+        isNapped = entity.isNapped,
+        notes = entity.notes
     )
 
     override fun buildUpdateDelta(
@@ -70,7 +73,8 @@ class DailyContextCodecV1(
         isDeleted = false.takeIf { isRestored },
         sleepHours = new.sleepHours diff old.sleepHours,
         readinessScore = new.readinessScore diff old.readinessScore,
-        isNapped = new.isNapped diff old.isNapped
+        isNapped = new.isNapped diff old.isNapped,
+        notes = new.notes diff old.notes
     )
 
     override fun FieldMergeScope.mergeDomainDelta(
@@ -82,7 +86,8 @@ class DailyContextCodecV1(
 
         sleepHours = eval(TAG_SLEEP_HOURS, delta.sleepHours, existing?.sleepHours),
         readinessScore = eval(TAG_READINESS_SCORE, delta.readinessScore, existing?.readinessScore),
-        isNapped = eval(TAG_IS_NAPPED, delta.isNapped, existing?.isNapped)
+        isNapped = eval(TAG_IS_NAPPED, delta.isNapped, existing?.isNapped),
+        notes = eval(TAG_NOTES, delta.notes, existing?.notes)
     )
 
     override fun computeDomainChangedTags(new: DailyContext, old: DailyContext?): List<Int> =
@@ -90,6 +95,7 @@ class DailyContextCodecV1(
             if (new.sleepHours != old?.sleepHours) add(TAG_SLEEP_HOURS)
             if (new.readinessScore != old?.readinessScore) add(TAG_READINESS_SCORE)
             if (new.isNapped != old?.isNapped) add(TAG_IS_NAPPED)
+            if (new.notes != old?.notes) add(TAG_NOTES)
         }
 
 }

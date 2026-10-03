@@ -28,7 +28,7 @@ class DefaultDailyContextRepository(
     logger = logger.withTags(LogTags.Layer.REPO, LogTags.Domain.BIO, "BioRep")
 ), DailyContextRepository {
 
-    override suspend fun upsertContext(context: DailyContext): Long =
+    override suspend fun upsertContext(context: DailyContext) =
         localUpsert(context.id) { existing ->
             compactState(context, existing)
         }
@@ -39,7 +39,7 @@ class DefaultDailyContextRepository(
         dailyContextDao.observeContext(epochDay).map { it?.toDomain() }
 
     override suspend fun getContext(epochDay: Long): DailyContext? =
-        dailyContextDao.getContextById(epochDay)?.toDomain()
+        dailyContextDao.getActiveContextById(epochDay)?.toDomain()
 
 
     // --- MAINTENANCE / SYNC ---
@@ -47,7 +47,7 @@ class DefaultDailyContextRepository(
         dailyContextDao.hardDeletePruning(cutoff)
 
     override suspend fun countSoftDeleted() = dailyContextDao.countSoftDeleted()
-    override suspend fun fetch(id: Long) = dailyContextDao.getContextById(id)?.toDomain()
+    override suspend fun fetchAny(id: Long) = dailyContextDao.getAnyContextById(id)?.toDomain()
     override suspend fun save(entity: DailyContext) = dailyContextDao.upsert(entity.toEntity())
     override suspend fun compactState(
         newState: DailyContext,
@@ -56,13 +56,15 @@ class DefaultDailyContextRepository(
         sleepHours = newState.sleepHours,
         readinessScore = newState.readinessScore,
         isNapped = newState.isNapped,
+        notes = newState.notes,
         lastModified = newState.lastModified,
-        isDeleted = newState.isDeleted,
+        isDeleted = newState.isDeleted
     ) ?: DailyContext(
         id = newState.id,
         sleepHours = newState.sleepHours,
         readinessScore = newState.readinessScore,
         isNapped = newState.isNapped,
+        notes = newState.notes,
         lastModified = newState.lastModified,
         createdAt = newState.createdAt
     )

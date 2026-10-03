@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,7 +36,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.mochame.core.design.AppLogo
 import com.mochame.core.design.MochaHeader
 import com.mochame.utils.interfaces.MochaTimeUtils
 import org.koin.compose.viewmodel.koinViewModel
@@ -136,7 +134,7 @@ fun DailyContextScreen(
                             ReadinessInputField(
                                 value = state.readinessScoreInput,
                                 onIntent = onIntent,
-                                onDone = { focusManager.clearFocus() }
+                                onDone = { focusManager.moveFocus(FocusDirection.Down) }
                             )
                         }
                     }
@@ -175,7 +173,7 @@ fun DailyContextScreen(
                         ReadinessInputField(
                             value = state.readinessScoreInput,
                             onIntent = onIntent,
-                            onDone = { focusManager.clearFocus() }
+                            onDone = { focusManager.moveFocus(FocusDirection.Down) }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         NapSwitchField(state.isNapped, onIntent)
@@ -183,7 +181,20 @@ fun DailyContextScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                NotesInputField(
+                    value = state.notesInput,
+                    onIntent = onIntent,
+                    onDone = { focusManager.clearFocus() }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -265,6 +276,34 @@ private fun ReadinessInputField(
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+private fun NotesInputField(
+    value: String,
+    onIntent: (DailyContextIntent) -> Unit,
+    onDone: () -> Unit
+) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Notes",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = { onIntent(DailyContextIntent.UpdateNotesInput(it)) },
+            placeholder = { Text("Testing...") },
+            minLines = 1,
+            maxLines = 10,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Default
+            ),
+            keyboardActions = KeyboardActions(onDone = { onDone() }),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

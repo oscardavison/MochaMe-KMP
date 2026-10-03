@@ -163,7 +163,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
         candidateKey = candidateKey,
         incomingHlc = incomingHlc,
         op = MutationOp.UPSERT,
-        fetchExistingState = { fetch(it) },
+        fetchExistingState = { fetchAny(it) },
         computeChange = computeChange,
         persist = { save(it) },
         onSkip = { 0L.also { logger.v { "Skipping Upsert [ID:$candidateKey]" } } }
@@ -200,7 +200,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
     ) = localDelete(
         candidateKey = candidateKey,
         incomingHlc = incomingHlc,
-        fetchExistingState = { fetch(it) },
+        fetchExistingState = { fetchAny(it) },
         computeChange = { it!!.withDeleteState(true) },
         persist = { save(it) },
         onSkip = { 0L }
@@ -246,7 +246,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
             candidateKey = context.candidateKey,
             incomingHlc = context.hlc,
             op = context.op,
-            fetchExistingState = { fetch(context.candidateKey) },
+            fetchExistingState = { fetchAny(context.candidateKey) },
             computeChange = { codec.routedDecode(payload, context, it) },
             persist = { stamped -> save(stamped) },
             onSkip = { 0L }
@@ -254,7 +254,7 @@ abstract class LocalFirstRepository<T : LocalFirstEntity<T>>(
     }
 
     // --- Features required to implement these methods ---
-    protected abstract suspend fun fetch(id: Long): T?
+    protected abstract suspend fun fetchAny(id: Long): T?
     protected abstract suspend fun save(entity: T): Long
     protected abstract suspend fun compactState(newState: T, existing: T?): T
 

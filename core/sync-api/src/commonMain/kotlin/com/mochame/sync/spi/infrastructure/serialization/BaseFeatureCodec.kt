@@ -7,9 +7,6 @@ import com.mochame.sync.api.models.LocalFirstEntity
 import com.mochame.sync.common.readProtobufVarint
 import com.mochame.sync.common.skipProtobufValue
 import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.FIRST_DOMAIN_TAG
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
 import com.mochame.sync.spi.models.DecodeContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -139,7 +136,6 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
         existingIsDeleted: Boolean?,
         candidateKey: Long
     ): Boolean {
-        val lastDeleteHlc = getTagHlc(TAG_IS_DELETED)
         val isNewer = lastDeleteHlc == null || incomingHlc > lastDeleteHlc
 
         return when {
@@ -157,7 +153,6 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
             // Explicit un-delete intent (e.g., CLI or UI toggling isDeleted back to false)
             deltaIsDeleted == false -> {
                 if (isNewer) {
-                    updateTag(TAG_IS_DELETED, incomingHlc)
                     logger.i { "Restored [key=$candidateKey]: explicit restore (HLC=$incomingHlc) overrides delete (HLC=$lastDeleteHlc)" }
                     false
                 } else {
@@ -165,7 +160,7 @@ abstract class BaseFeatureCodec<T : LocalFirstEntity<T>, D : LocalFirstDelta>(
                 }
             }
 
-            // Implicit revival: Incoming upsert arrives against an existing tombstone
+            // Implicit revival: Incoming upsert arrives against an existing soft delete
             existingIsDeleted == true -> {
                 if (isNewer) {
                     updateTag(TAG_IS_DELETED, incomingHlc)

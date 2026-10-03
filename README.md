@@ -1,14 +1,11 @@
 # MochaMe-KMP
-## v0.1.0
+## v0.1.1
 
 <img src="/docs/images/readme_applogo.webp" alt="app logo">
 
 ---
 
 <details>
-
-Needs Updating
-
 <summary><b> Local First Architecture </b></summary>
 
 <br>

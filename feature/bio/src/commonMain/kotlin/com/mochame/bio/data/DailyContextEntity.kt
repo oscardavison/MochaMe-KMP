@@ -18,6 +18,7 @@ data class DailyContextEntity(
     val sleepHours: Double? = null,
     val readinessScore: Int? = null,
     val isNapped: Boolean? = null,
+    val notes: String? = null,
     val isDeleted: Boolean = false,
     val fieldHlcs: ByteArray = ByteArray(0),
     val lastModified: Long,

@@ -3,6 +3,7 @@ package com.mochame.sync.spi.infrastructure.serialization
 import co.touchlab.kermit.Logger
 import com.mochame.sync.api.hlc.HLC
 import com.mochame.sync.common.hasTag
+import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
 
 /**
  * Scope provided to feature codecs during field-level delta merging.
@@ -19,23 +20,30 @@ class FieldMergeScope(
     val incomingHlc: HLC,
     val changedMask: Long,
     val logger: Logger,
-    val isDelete: Boolean = false
+    val isDelete: Boolean = false,
 ) {
     @PublishedApi
     internal var index = FieldHlcMap(existingBytes)
+    @PublishedApi
+    internal val lastDeleteHlc = index.getHlc(TAG_IS_DELETED)
 
     /**
      * Evaluates field resolution using Last-Write-Wins:
      * - Deletion sweep (`isDelete == true`): Nullifies the field and updates its tag to [incomingHlc]
      *   if the local tag HLC is older than or equal to [incomingHlc]. If a local edit occurred strictly
      *   after [incomingHlc], [existingVal] survives.
+     * - Incoming upserts must be greater than the local deletion horizon.
      * - Sparse upsert (`isDelete == false`):
      *   - If [tagId] is absent from [changedMask], retains [existingVal] without modifying the tag index.
      *   - If [tagId] is present in [changedMask], accepts [incomingVal] and updates the tag index if
      *     the local tag HLC is null or [incomingHlc] > local tag HLC. Otherwise, retains [existingVal].
      */
     @Suppress("NOTHING_TO_INLINE")
-    inline fun <V> eval(tagId: Int, incomingVal: V?, existingVal: V?): V? {
+    inline fun <V> eval(
+        tagId: Int,
+        incomingVal: V?,
+        existingVal: V?,
+    ): V? {
         if (isDelete) {
             val localTagHlc = index.getHlc(tagId)
             return if (localTagHlc == null || incomingHlc >= localTagHlc) {
@@ -47,6 +55,11 @@ class FieldMergeScope(
         }
 
         if (!changedMask.hasTag(tagId)) return existingVal
+
+        if (lastDeleteHlc != null && incomingHlc <= lastDeleteHlc) {
+            logger.v { "Field Rejected [tag=$tagId]. Inbound HLC ($incomingHlc) <= Delete Horizon ($lastDeleteHlc)" }
+            return existingVal
+        }
 
         val localTagHlc = index.getHlc(tagId)
         return if (localTagHlc == null || incomingHlc > localTagHlc) {
@@ -61,7 +74,7 @@ class FieldMergeScope(
     /**
      * Returns the recorded [HLC] for [tagId] in the active merge index.
      */
-    internal fun getTagHlc(tagId: Int): HLC? = index.getHlc(tagId)
+    internal fun getHlc(tagId: Int): HLC? = index.getHlc(tagId)
 
     /**
      * Explicitly stamps [tagId] with [hlc] in the active merge index.

@@ -35,7 +35,7 @@ compose.desktop {
 //            obfuscate = false
 //        }
 
-        // JVM Runtime Flags (Memory & Wayland/Display tuning) - Need to verify this more
+        // JVM Runtime Flags (Memory & Wayland/Display tuning) - Need to verify this
         jvmArgs += listOf(
             "-Xms64m",                   // Low initial heap
             "-Xmx512m",                  // Cap maximum heap to keep desktop RAM usage modest

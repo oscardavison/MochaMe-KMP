@@ -62,7 +62,7 @@ internal class EngineHlcFactory(
         while (true) {
             val candidateHlc = stateMutex.withLock {
                 val currentState = state
-                    ?: throw MochaException.Policy.CausalityViolation("Cannot fetch a timestamp with no pre-existing state.")
+                    ?: throw MochaException.Policy.CausalityViolation("Cannot fetchAny a timestamp with no pre-existing state.")
                 val deviceClock = timeUtils.now()
 
                 HlcEvaluator.computeNextTick(

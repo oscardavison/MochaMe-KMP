@@ -24,7 +24,7 @@ private inline fun runEnv(crossinline block: suspend DailyContextDao.(TestScope)
     )
 
 private suspend fun DailyContextDao.markAsDeleted(id: Long, hlc: String, lastModified: Long) {
-    val existing = getContextById(id)
+    val existing = getActiveContextById(id)
     if (existing != null) {
         upsert(existing.copy(isDeleted = true, hlc = hlc, lastModified = lastModified))
     }
@@ -54,7 +54,7 @@ class DailyContextDaoTest : MochaPlatformTest() {
         )
         upsert(updatedContext)
 
-        val result = getContextById(dayKey)
+        val result = getActiveContextById(dayKey)
         assertNotNull(result)
         assertEquals(8.5, result.sleepHours)
         assertEquals(TestHlcFactory.create(1001L).toString(), result.hlc)
@@ -272,7 +272,7 @@ class DailyContextDaoTest : MochaPlatformTest() {
         )
         upsert(resurrection)
 
-        val result = getContextById(id)
+        val result = getActiveContextById(id)
         assertEquals(false, result?.isDeleted)
         assertEquals(7.0, result?.sleepHours)
     }
@@ -300,8 +300,8 @@ class DailyContextDaoTest : MochaPlatformTest() {
 
         hardDeletePruning(3000L)
 
-        assertNull(getSoftDeletedContextById(1L))
-        assertNotNull(getSoftDeletedContextById(2L))
+        assertNull(getAnyContextById(1L))
+        assertNotNull(getAnyContextById(2L))
     }
 
 }

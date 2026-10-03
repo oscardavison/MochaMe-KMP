@@ -247,7 +247,7 @@ class EngineHlcFactoryTest : MochaPlatformTest() {
                 "Causality Violation: Duplicate HLCs detected across threads!"
             )
 
-            // Act II: introduce clock skew and fetch a new HLC
+            // Act II: introduce clock skew and fetchAny a new HLC
             fakeClock.reverseTime(1.milliseconds)
             val skewedSentinel = factory.getNextHlc()
 

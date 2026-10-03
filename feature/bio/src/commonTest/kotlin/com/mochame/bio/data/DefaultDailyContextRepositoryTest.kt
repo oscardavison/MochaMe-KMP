@@ -13,6 +13,7 @@ import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.common.bitmaskOf
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
+import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
 import kotlinx.coroutines.test.TestScope
 import org.koin.plugin.module.dsl.modules
@@ -63,7 +64,7 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         // 4am rule
         assertEquals(context.id, rowId)
 
-        val fetched = contextDao.getContextById(rowId)
+        val fetched = contextDao.getActiveContextById(rowId)
         assertNotNull(fetched)
         assertEquals(context.id, fetched.id)
         assertEquals(8.5, fetched.sleepHours)
@@ -78,7 +79,7 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
 
         contextRepo.upsertContext(context)
 
-        val entity = contextDao.getContextById(context.id)
+        val entity = contextDao.getActiveContextById(context.id)
         assertNotNull(entity)
         assertEquals(context.id, entity.id)
         assertEquals(false, entity.isDeleted)
@@ -106,13 +107,13 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
 
         contextRepo.upsertContext(originalContext)
 
-        val initialEntity = contextDao.getContextById(originalContext.id)
+        val initialEntity = contextDao.getActiveContextById(originalContext.id)
         assertNotNull(initialEntity)
         val initialCreatedAt = initialEntity.createdAt
 
         contextRepo.upsertContext(originalContext.copy(sleepHours = null, readinessScore = 75))
 
-        val updatedFetched = contextDao.getContextById(originalContext.id)
+        val updatedFetched = contextDao.getActiveContextById(originalContext.id)
         assertNotNull(updatedFetched)
         assertEquals(null, updatedFetched.sleepHours)
         assertEquals(75, updatedFetched.readinessScore)
@@ -147,7 +148,7 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         assertTrue(deleteResult != 0L)
 
         // Assert
-        val entity = contextDao.getSoftDeletedContextById(context.id)
+        val entity = contextDao.getAnyContextById(context.id)
         assertNotNull(entity)
         assertTrue(entity.isDeleted)
 

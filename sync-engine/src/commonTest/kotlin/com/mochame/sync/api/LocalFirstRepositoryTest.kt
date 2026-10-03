@@ -677,6 +677,8 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
             )
             integratedRepo.seed(initialEntity)
             integratedRepo.delete(candidateKey)
+            val deletedEntity = integratedRepo.storedEntities[candidateKey]!!
+            assertTrue(deletedEntity.fieldHlcs.isNotEmpty())
 
             // Device B: remote upsert
             val remoteState = FeatureEntity(
@@ -697,10 +699,9 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
 
             // Verify final state
             assertTrue(finalEntity.isDeleted, "Deletion status preserved")
-            assertEquals("REMOTE_UPDATED_TEXT", finalEntity.textValue)
-            assertEquals(initialEntity.countValue, finalEntity.countValue)
-            assertNotEquals(initialEntity.textValue, finalEntity.textValue)
-            assertNotEquals(initialEntity.fieldHlcs, finalEntity.fieldHlcs)
+            assertNull(finalEntity.textValue)
+            assertNull(finalEntity.countValue)
+            assertEquals(deletedEntity.fieldHlcs, finalEntity.fieldHlcs)
 
             // Verify side-effects
             assertEquals(1, intentStore.intents.size, "Only local deletion.")

@@ -44,7 +44,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         assertEquals("currentValue", result)
         assertEquals(
             initialHlc,
-            scope.getTagHlc(tagId = 1),
+            scope.getHlc(tagId = 1),
             "Tag 1 HLC must not be updated when incoming value is null"
         )
         writer.assertFieldRejectionLogCount(0)
@@ -70,7 +70,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
 
         // Then: Accepts incoming value and inserts tag with incoming HLC
         assertEquals("insertedText", result)
-        assertEquals(incomingHlc, scope.getTagHlc(tagId = 3))
+        assertEquals(incomingHlc, scope.getHlc(tagId = 3))
         assertEquals(FieldHlcMap.RECORD_SIZE, scope.buildResultBlob().size)
         writer.assertFieldRejectionLogCount(0)
     }
@@ -100,7 +100,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
 
         // Then
         assertEquals("newAcceptedValue", result)
-        assertEquals(higherIncomingHlc, scope.getTagHlc(tagId = 4))
+        assertEquals(higherIncomingHlc, scope.getHlc(tagId = 4))
         assertEquals(
             FieldHlcMap.RECORD_SIZE,
             scope.buildResultBlob().size,
@@ -137,7 +137,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
 
             // Then: Rejects incoming value, retains existing value, and preserves local tag HLC
             assertEquals("winnerLocalValue", result)
-            assertEquals(localHlc, scope.getTagHlc(tagId = 4), "Tag 4 HLC must remain at 500L")
+            assertEquals(localHlc, scope.getHlc(tagId = 4), "Tag 4 HLC must remain at 500L")
             writer.assertFieldRejectionLogCount(1)
         }
 
@@ -146,19 +146,19 @@ class FieldMergeScopeTest : MochaPlatformTest() {
     // ===================================================================
 
     @Test
-    fun should_correctlyAggregateBinaryResultBlob_when_mergingMixedFields() = runEnv {
+    fun should_correctlyAggregateBinaryResultBlob_when_simulatingRestore() = runEnv {
         // Given
-        val hlcTag1 = createHlc(ts = 100L)
-        val hlcTag2 = createHlc(ts = 500L)
+        val hlcTs100 = createHlc(ts = 100L)
+        val hlcTs200 = createHlc(ts = 200L)
         val initialBytes = FieldHlcMap.EMPTY
-            .updateTag(tagId = 1, hlc = hlcTag1)
-            .updateTag(tagId = 2, hlc = hlcTag2)
+            .updateTag(tagId = 1, hlc = hlcTs100)
+            .updateTag(tagId = 2, hlc = hlcTs200)
             .bytes
 
-        val incomingHlc = createHlc(ts = 300L)
+        val incomingHlcTs300 = createHlc(ts = 300L)
         val scope = FieldMergeScope(
             existingBytes = initialBytes,
-            incomingHlc = incomingHlc,
+            incomingHlc = incomingHlcTs300,
             changedMask = 0b00001110L,
             logger
         )
@@ -171,7 +171,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
 
         // Then
         assertEquals("val1_new", field1)
-        assertEquals("val2_old", field2)
+        assertEquals("val2_new", field2)
         assertEquals("val3_new", field3)
         assertEquals("val4_old", field4)
 
@@ -179,11 +179,11 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         assertEquals(FieldHlcMap.RECORD_SIZE * 3, resultBlob.size)
 
         val resultMap = FieldHlcMap(resultBlob)
-        assertEquals(incomingHlc, resultMap.getHlc(tagId = 1))
-        assertEquals(hlcTag2, resultMap.getHlc(tagId = 2))
-        assertEquals(incomingHlc, resultMap.getHlc(tagId = 3))
+        assertEquals(incomingHlcTs300, resultMap.getHlc(tagId = 1))
+        assertEquals(incomingHlcTs300, resultMap.getHlc(tagId = 2))
+        assertEquals(incomingHlcTs300, resultMap.getHlc(tagId = 3))
         assertNull(resultMap.getHlc(tagId = 4))
-        writer.assertFieldRejectionLogCount(1)
+        writer.assertFieldRejectionLogCount(0)
     }
 
     // ===================================================================
@@ -219,9 +219,9 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         assertEquals("recentValue", survivingField)
         assertNull(unrecordedField)
 
-        assertEquals(deleteHlc, scope.getTagHlc(tagId = 1))
-        assertEquals(newerHlc, scope.getTagHlc(tagId = 2))
-        assertEquals(deleteHlc, scope.getTagHlc(tagId = 3))
+        assertEquals(deleteHlc, scope.getHlc(tagId = 1))
+        assertEquals(newerHlc, scope.getHlc(tagId = 2))
+        assertEquals(deleteHlc, scope.getHlc(tagId = 3))
         assertEquals(FieldHlcMap.RECORD_SIZE * 3, scope.buildResultBlob().size)
     }
 
@@ -241,7 +241,7 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         scope.updateTag(tagId = 2, hlc = updatedHlc)
 
         // Then
-        assertEquals(updatedHlc, scope.getTagHlc(tagId = 2))
+        assertEquals(updatedHlc, scope.getHlc(tagId = 2))
         assertEquals(FieldHlcMap.RECORD_SIZE, scope.buildResultBlob().size)
     }
 

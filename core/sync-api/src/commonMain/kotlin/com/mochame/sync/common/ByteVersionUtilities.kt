@@ -84,7 +84,7 @@ inline fun <T : Any, R> VersionRouter<T>.stripAndVersion(
 //
 //    val version = source.readByte()
 //    val codec = versionMap[version] ?: run {
-//        logger.e { "Unable to fetch codec. Unknown protocol version byte: $version" }
+//        logger.e { "Unable to fetchAny codec. Unknown protocol version byte: $version" }
 //        throw MochaException.Persistent.UnknownProtocolVersion(version)
 //    }
 //

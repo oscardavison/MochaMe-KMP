@@ -3,6 +3,7 @@ package com.mochame.bio.cli
 import com.mochame.bio.domain.DailyContextRepository
 import com.mochame.bio.domain.SaveDailyContextUseCase
 import com.mochame.utils.interfaces.MochaTimeUtils
+import com.mochame.utils.ui.InputSanitizer
 import com.mochame.utils.ui.InteractiveScreen
 import com.mochame.utils.ui.PrimitiveParsers
 import com.mochame.utils.ui.ScreenResult
@@ -25,45 +26,72 @@ class DailyContextCliScreen(
         val currentEntity = repository.getContext(activeEpochDay)
 
         println("Current Stored Values:")
-        println("  1. Sleep Hours    : " + (currentEntity?.sleepHours?.let { "$it hrs" } ?: "[Not Set]"))
+        println("  1. Sleep Hours    : " + (currentEntity?.sleepHours?.let { "$it hrs" }
+            ?: "[Not Set]"))
         println("  2. Readiness (1-5): " + (currentEntity?.readinessScore ?: "[Not Set]"))
-        println("  3. Napped Today   : " + (currentEntity?.isNapped?.let { if (it) "Yes" else "No" } ?: "[Not Set]"))
+        println("  3. Napped Today   : " + (currentEntity?.isNapped?.let { if (it) "Yes" else "No" }
+            ?: "[Not Set]"))
+        println(
+            "  4. Notes          : " + (
+                    if (currentEntity?.notes == null) {
+                        "[Not Set]"
+                    } else {
+                        "\n" + currentEntity.notes
+                    })
+        )
         println("----------------------------------------")
         println("Options:")
         println("  [0] Log All Fields (Batch Wizard)")
         println("  [1] Edit Sleep Hours")
         println("  [2] Edit Readiness Score")
         println("  [3] Toggle Nap Status")
-        println("  [4] Change Active Day")
-        println("  [5] Delete Record for this Day")
+        println("  [4] Edit Notes")
+        println("  [5] Change Active Day")
+        println("  [6] Delete Record for this Day")
         println("  [b] Back to Main Menu")
         print("\nSelect Option > ")
 
         return when (readlnOrNull()?.trim()?.lowercase()) {
             "0" -> {
-                handleBatchEntry(currentEntity?.sleepHours, currentEntity?.readinessScore, currentEntity?.isNapped)
+                handleBatchEntry(
+                    currentEntity?.sleepHours,
+                    currentEntity?.readinessScore,
+                    currentEntity?.isNapped,
+                    currentEntity?.notes
+                )
                 ScreenResult.Stay
             }
+
             "1" -> {
                 handleSingleSleep(currentEntity?.sleepHours)
                 ScreenResult.Stay
             }
+
             "2" -> {
                 handleSingleReadiness(currentEntity?.readinessScore)
                 ScreenResult.Stay
             }
+
             "3" -> {
                 handleNapToggle(currentEntity?.isNapped)
                 ScreenResult.Stay
             }
+
             "4" -> {
+                handleSingleNotes(currentEntity?.notes)
+                ScreenResult.Stay
+            }
+
+            "5" -> {
                 handleChangeDay()
                 ScreenResult.Stay
             }
-            "5" -> {
+
+            "6" -> {
                 handleDelete()
                 ScreenResult.Stay
             }
+
             "b", "back" -> ScreenResult.GoBack
             else -> {
                 println("[ERROR] Invalid choice.")
@@ -78,39 +106,34 @@ class DailyContextCliScreen(
     private suspend fun handleBatchEntry(
         currentSleep: Double?,
         currentReadiness: Int?,
-        currentNapped: Boolean?
+        currentNapped: Boolean?,
+        currentNotes: String?
     ) {
         println("\n--- Batch Entry Wizard ---")
         println("(Enter value, 'clear' to unset, press Enter to keep current, or 'c' to cancel)")
 
-        val sleepUpdate = promptSleep(currentSleep)
-        if (sleepUpdate == null) {
-            println("[INFO] Batch entry aborted. No changes made.")
-            return
-        }
-
-        val readinessUpdate = promptReadiness(currentReadiness)
-        if (readinessUpdate == null) {
-            println("[INFO] Batch entry aborted. No changes made.")
-            return
-        }
-
-        val nappedUpdate = promptNap(currentNapped)
-        if (nappedUpdate == null) {
-            println("[INFO] Batch entry aborted. No changes made.")
-            return
-        }
+        val sleepUpdate = promptOrAbort { promptSleep(currentSleep) } ?: return
+        val readinessUpdate = promptOrAbort { promptReadiness(currentReadiness) } ?: return
+        val nappedUpdate = promptOrAbort { promptNap(currentNapped) } ?: return
+        val notesUpdate = promptOrAbort { promptNotes(currentNotes) } ?: return
 
         saveUseCase(
             epochDay = activeEpochDay,
             sleepHours = sleepUpdate,
             readinessScore = readinessUpdate,
-            isNapped = nappedUpdate
+            isNapped = nappedUpdate,
+            notes = notesUpdate
         ).fold(
             onSuccess = { println("[SUCCESS] All metrics saved for day $activeEpochDay.") },
-            onFailure = { println("[ERROR] Failed to save client: ${it.message}") }
+            onFailure = { error -> println("[ERROR] Failed to save client: ${error.message}") }
         )
     }
+
+    inline fun <T> promptOrAbort(prompt: () -> T?): T? =
+        prompt() ?: run {
+            println("[INFO] Batch entry aborted. No changes made.")
+            null
+        }
 
     // --- Single-Field Handlers ---
 
@@ -138,6 +161,18 @@ class DailyContextCliScreen(
         )
     }
 
+    private suspend fun handleSingleNotes(current: String?) {
+        val update = promptNotes(current) ?: return
+        if (update is Update.Unchanged) {
+            println("[INFO] Notes unchanged.")
+            return
+        }
+        saveUseCase(activeEpochDay, notes = update).fold(
+            onSuccess = { println("[SUCCESS] Notes updated.") },
+            onFailure = { println("[ERROR] ${it.message}") }
+        )
+    }
+
     private suspend fun handleNapToggle(current: Boolean?) {
         val update = promptNap(current) ?: return
         if (update is Update.Unchanged) {
@@ -159,14 +194,19 @@ class DailyContextCliScreen(
             val input = readlnOrNull()?.trim() ?: return Update.Unchanged
 
             when {
-                input.equals("c", ignoreCase = true) || input.equals("cancel", ignoreCase = true) -> {
+                input.equals("c", ignoreCase = true) || input.equals(
+                    "cancel",
+                    ignoreCase = true
+                ) -> {
                     println("[INFO] Operation cancelled.")
                     return null
                 }
+
                 input.isEmpty() -> return Update.Unchanged
                 input.equals("clear", ignoreCase = true) -> return Update.Clear
                 else -> {
-                    val result = PrimitiveParsers.parseBoundedDouble(input, 0.0..72.0, "Sleep Hours")
+                    val result =
+                        PrimitiveParsers.parseBoundedDouble(input, 0.0..72.0, "Sleep Hours")
                     if (result.isSuccess) {
                         return Update.Set(result.getOrThrow()!!)
                     } else {
@@ -184,10 +224,14 @@ class DailyContextCliScreen(
             val input = readlnOrNull()?.trim() ?: return Update.Unchanged
 
             when {
-                input.equals("c", ignoreCase = true) || input.equals("cancel", ignoreCase = true) -> {
+                input.equals("c", ignoreCase = true) || input.equals(
+                    "cancel",
+                    ignoreCase = true
+                ) -> {
                     println("[INFO] Operation cancelled.")
                     return null
                 }
+
                 input.isEmpty() -> return Update.Unchanged
                 input.equals("clear", ignoreCase = true) -> return Update.Clear
                 else -> {
@@ -202,6 +246,63 @@ class DailyContextCliScreen(
         }
     }
 
+    private fun promptNotes(current: String?): Update<String>? {
+        val displayCurrent = current?.takeIf { it.isNotBlank() } ?: "Not Set"
+
+        println("\n----------------------------------------")
+        println("Edit Notes [Current: $displayCurrent]")
+        println("Instructions:")
+        println(" • Type your notes freely (press Enter for new lines).")
+        println(" • Enter '.' on an empty line and press Enter to save.")
+        println(" • Press Enter immediately on line 1 to keep current.")
+        println(" • Type 'clear' and press Enter on line 1 to erase.")
+        println(" • Type 'c' or 'cancel' to abort.")
+        println("----------------------------------------")
+        print("> ")
+
+        val firstLine = readlnOrNull() ?: return Update.Unchanged
+        val trimmedFirst = firstLine.trim()
+
+        when {
+            trimmedFirst.equals("c", ignoreCase = true) || trimmedFirst.equals(
+                "cancel",
+                ignoreCase = true
+            ) -> {
+                println("[INFO] Operation cancelled.")
+                return null
+            }
+
+            trimmedFirst.isEmpty() -> {
+                println("[INFO] Notes unchanged.")
+                return Update.Unchanged
+            }
+
+            trimmedFirst.equals("clear", ignoreCase = true) -> {
+                println("[INFO] Notes cleared.")
+                return Update.Clear
+            }
+
+            trimmedFirst == "." -> {
+                println("[INFO] Notes unchanged.")
+                return Update.Unchanged
+            }
+        }
+
+        val lines = mutableListOf<String>()
+        lines.add(firstLine)
+
+        while (true) {
+            print("... ")
+            val nextLine = readlnOrNull() ?: break
+            if (nextLine.trim() == ".") break
+            lines.add(nextLine)
+        }
+
+        println("[INFO] Notes saved.")
+        val cleanNotes = InputSanitizer.sanitizeMultiline(lines.joinToString("\n"))
+        return if (cleanNotes != null) Update.Set(cleanNotes) else Update.Clear
+    }
+
     private fun promptNap(current: Boolean?): Update<Boolean>? {
         val displayCurrent = current?.let { if (it) "Yes" else "No" } ?: "Not Set"
         while (true) {
@@ -209,10 +310,14 @@ class DailyContextCliScreen(
             val input = readlnOrNull()?.trim() ?: return Update.Unchanged
 
             when {
-                input.equals("c", ignoreCase = true) || input.equals("cancel", ignoreCase = true) -> {
+                input.equals("c", ignoreCase = true) || input.equals(
+                    "cancel",
+                    ignoreCase = true
+                ) -> {
                     println("[INFO] Operation cancelled.")
                     return null
                 }
+
                 input.isEmpty() -> return Update.Unchanged
                 input.equals("clear", ignoreCase = true) -> return Update.Clear
                 else -> {

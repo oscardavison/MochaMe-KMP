@@ -42,7 +42,7 @@ internal class FeatureRepositoryFixture(
 
     suspend fun delete(candidateKey: Long): Long = localDelete(candidateKey)
 
-    override suspend fun fetch(id: Long): FeatureEntity? =
+    override suspend fun fetchAny(id: Long): FeatureEntity? =
         lock.withLock { memoryStore[id] }
 
     override suspend fun save(entity: FeatureEntity): Long = lock.withLock {
