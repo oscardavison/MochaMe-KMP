@@ -1,7 +1,9 @@
 # MochaMe-KMP
 ## v0.1.1
 
-<img src="/docs/images/readme_applogo.webp" alt="app logo">
+<p align="center">
+  <img src="/docs/images/readme_applogo.webp" alt="app logo" width="220" height="288">
+</p>
 
 ---
 
