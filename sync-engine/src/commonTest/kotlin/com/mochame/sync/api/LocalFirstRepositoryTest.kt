@@ -10,20 +10,10 @@ import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.metadata.SyncStatus
-import com.mochame.sync.common.bitmaskOf
-import com.mochame.sync.common.toBitmask
 import com.mochame.sync.di.api.LocalFirstRepoTestEnv
 import com.mochame.sync.di.api.LocalFirstRepoTestModule
-import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_TEXT_VALUE
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
-import com.mochame.sync.internal.fixtures.serialization.deriveContext
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
-import com.mochame.sync.spi.models.DecodeContext
 import com.mochame.utils.fixtures.TestHlcFactory
-import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,7 +26,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.io.IOException
 import org.koin.plugin.module.dsl.modules
-import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -48,7 +37,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 private inline fun runEnv(crossinline block: suspend LocalFirstRepoTestEnv.(TestScope) -> Unit) =
     runUnitEnvironment<LocalFirstRepoTestEnv>(
@@ -56,250 +44,18 @@ private inline fun runEnv(crossinline block: suspend LocalFirstRepoTestEnv.(Test
         block = block
     )
 
+/**
+ * Unit & Integration tests for local feature repository mutations ([syncUpsert], [syncDelete]),
+ * candidate key locking, transaction commits, and boot readiness checks.
+ *
+ * Remote intent processing tests are isolated in [com.mochame.sync.engine.DefaultLocalFirstEngineTest].
+ */
 @ExperimentalCoroutinesApi
 class LocalFirstRepositoryTest : MochaPlatformTest() {
 
     // -----------------------------------------------------------
-    // Deletion / Restoration & Field Diffing
+    // LOCAL OPERATIONS PIPELINE
     // -----------------------------------------------------------
-
-    @Test
-    fun arrivalOrderInvariance_deleteAt50AndEditAt45_convergeIdentically() = runEnv {
-        setupValidContext()
-        val candidateKey1 = 2051L
-        val candidateKey2 = 2052L
-
-        val hlc10 = TestHlcFactory.createWithOffset((-60).minutes)
-        val hlc45 = TestHlcFactory.createWithOffset((-45).minutes)
-        val hlc50 = TestHlcFactory.createWithOffset((-40).minutes)
-
-        val init1 =
-            FeatureEntity(id = candidateKey1, hlc = hlc10, textValue = "BASE", countValue = 10)
-        val init2 =
-            FeatureEntity(id = candidateKey2, hlc = hlc10, textValue = "BASE", countValue = 10)
-        val (ins1, insPay1) = makeRemoteIntent(init1, null, hlc10, MutationOp.UPSERT)
-        val (ins2, insPay2) = makeRemoteIntent(init2, null, hlc10, MutationOp.UPSERT)
-        repo.processRemoteIntent(ins1, insPay1)
-        repo.processRemoteIntent(ins2, insPay2)
-
-        val edit1 = init1.copy(hlc = hlc45, textValue = "CONCURRENT")
-        val edit2 = init2.copy(hlc = hlc45, textValue = "CONCURRENT")
-        val (eCtx1, ePay1) = makeRemoteIntent(edit1, init1, hlc45, MutationOp.UPSERT)
-        val (eCtx2, ePay2) = makeRemoteIntent(edit2, init2, hlc45, MutationOp.UPSERT)
-
-        val del1 = init1.withDeleteState(true).copy(hlc = hlc50)
-        val del2 = init2.withDeleteState(true).copy(hlc = hlc50)
-        val (dCtx1, dPay1) = makeRemoteIntent(del1, init1, hlc50, MutationOp.DELETE)
-        val (dCtx2, dPay2) = makeRemoteIntent(del2, init2, hlc50, MutationOp.DELETE)
-
-        // Replica 1 Order: Delete@50 THEN Edit@45
-        repo.processRemoteIntent(dCtx1, dPay1)
-        repo.processRemoteIntent(eCtx1, ePay1)
-
-        // Replica 2 Order: Edit@45 THEN Delete@50
-        repo.processRemoteIntent(eCtx2, ePay2)
-        repo.processRemoteIntent(dCtx2, dPay2)
-
-        val replica1 = repo.storedEntities[candidateKey1]
-        val replica2 = repo.storedEntities[candidateKey2]
-
-        assertNotNull(replica1)
-        assertNotNull(replica2)
-        assertEquals(
-            replica1.isDeleted,
-            replica2.isDeleted,
-            "Both replicas must agree on deletion status"
-        )
-        assertTrue(replica1.isDeleted, "Delete@50 dominates Edit@45 regardless of arrival sequence")
-        assertEquals(replica1.textValue, replica2.textValue)
-        assertNull(replica1.textValue, "Field must be null on both replicas")
-        assertEquals(replica1.hlc, replica2.hlc, "Both entities converge to identical HLC")
-    }
-
-    @Test
-    fun deleteArrivingBeforeInsert_rejectsSafelyWithoutCrashing() = runEnv {
-        setupValidContext()
-        val candidateKey = 206L
-        val deleteHlc = TestHlcFactory.createWithOffset((-20).minutes)
-
-        assertNull(repo.storedEntities[candidateKey])
-
-        val dummy = FeatureEntity(id = candidateKey, hlc = deleteHlc)
-        val deletion = dummy.withDeleteState(true).copy(hlc = deleteHlc)
-        val (delCtx, delPayload) = makeRemoteIntent(deletion, dummy, deleteHlc, MutationOp.DELETE)
-
-        repo.processRemoteIntent(delCtx, delPayload)
-
-        assertNull(
-            repo.storedEntities[candidateKey],
-            "Remote delete against non-existent record must not create row"
-        )
-        assertEquals(0, intentStore.intents.size, "No redundant intents generated")
-        assertEquals(0, workerHook.invalidationCount, "No worker invalidation triggered")
-    }
-
-    @Test
-    fun offlineDeleteInterleavedWithConcurrentEditAndPostDeleteUpdate_convergesDeterministically() = runEnv {
-        setupValidContext()
-        val candidateKey = 211L
-
-        val hlc10 = TestHlcFactory.createWithOffset((-50).minutes)
-        val hlc20 = TestHlcFactory.createWithOffset((-40).minutes)
-        val hlc25 = TestHlcFactory.createWithOffset((-35).minutes)
-        val hlc30 = TestHlcFactory.createWithOffset((-30).minutes)
-
-        // 1. Initial synced state: both fields populated @ HLC 10
-        val initial = FeatureEntity(
-            id = candidateKey,
-            hlc = hlc10,
-            isDeleted = false,
-            textValue = "SLEEP_5",
-            countValue = 2
-        )
-        val (initCtx, initPayload) = makeRemoteIntent(initial, null, hlc10, MutationOp.UPSERT)
-        repo.processRemoteIntent(initCtx, initPayload)
-
-        // 2. Peer B (JVM) performs concurrent edit on countValue @ HLC 25
-        val jvmEdit = initial.copy(hlc = hlc25, countValue = 99)
-        val (editCtx, editPayload) = makeRemoteIntent(jvmEdit, initial, hlc25, MutationOp.UPSERT)
-        repo.processRemoteIntent(editCtx, editPayload)
-
-        // 3. Peer A (Android) offline delete @ HLC 20 arrives (older than JVM edit @ 25, newer than initial @ 10)
-        val offlineDelete = initial.withDeleteState(true).copy(hlc = hlc20)
-        val (delCtx, delPayload) = makeRemoteIntent(offlineDelete, initial, hlc20, MutationOp.DELETE)
-        repo.processRemoteIntent(delCtx, delPayload)
-
-        // Verify intermediate state after delete ingestion:
-        // - textValue (HLC 10 <= 20) was swept to null by the delete horizon
-        // - countValue (HLC 25 > 20) survived the delete horizon
-        // - isDeleted must NOT be true because a surviving field keeps the entity alive
-        val storedAfterDelete = repo.storedEntities[candidateKey]
-        assertNotNull(storedAfterDelete, "Entity must exist in storage")
-        assertFalse(
-            storedAfterDelete.isDeleted,
-            "Surviving field write at HLC 25 must prevent entity from being marked deleted"
-        )
-        assertNull(
-            storedAfterDelete.textValue,
-            "Pre-delete field value at HLC 10 must be swept to null by delete horizon at HLC 20"
-        )
-        assertEquals(
-            99,
-            storedAfterDelete.countValue,
-            "Concurrent field write at HLC 25 must survive the delete horizon at HLC 20"
-        )
-
-        // 4. Peer A (Android) post-delete update arrives @ HLC 30 updating textValue
-        val androidUpdate = initial.copy(
-            hlc = hlc30,
-            textValue = "READINESS_3",
-            countValue = null
-        )
-        val (updateCtx, updatePayload) = makeRemoteIntent(androidUpdate, offlineDelete, hlc30, MutationOp.UPSERT)
-        repo.processRemoteIntent(updateCtx, updatePayload)
-
-        // 5. Final state verification across both fields
-        val finalStored = repo.storedEntities[candidateKey]
-        assertNotNull(finalStored, "Final entity must exist in storage")
-        assertFalse(finalStored.isDeleted, "Entity must remain active")
-        assertEquals(
-            "READINESS_3",
-            finalStored.textValue,
-            "Post-delete edit at HLC 30 must be applied"
-        )
-        assertEquals(
-            99,
-            finalStored.countValue,
-            "Concurrent edit from JVM at HLC 25 must not be lost or flipped"
-        )
-        assertEquals(
-            hlc30,
-            finalStored.hlc,
-            "Root entity HLC must advance to the latest edit"
-        )
-    }
-
-    @Test
-    fun fieldLessRestore_revivesEntityViaStructuralWitnessTags() = runEnv {
-        setupValidContext()
-        val candidateKey = 208L
-
-        val hlc10 = TestHlcFactory.createWithOffset((-50).minutes)
-        val hlc20 = TestHlcFactory.createWithOffset((-40).minutes)
-        val hlc30 = TestHlcFactory.createWithOffset((-30).minutes)
-
-        // 1. Initial insert @ 10, delete @ 20
-        val initial =
-            FeatureEntity(id = candidateKey, hlc = hlc10, textValue = "INIT", countValue = 10)
-        val (insCtx, insPayload) = makeRemoteIntent(initial, null, hlc10, MutationOp.UPSERT)
-        repo.processRemoteIntent(insCtx, insPayload)
-
-        val deletion = initial.withDeleteState(true).copy(hlc = hlc20)
-        val (delCtx, delPayload) = makeRemoteIntent(deletion, initial, hlc20, MutationOp.DELETE)
-        repo.processRemoteIntent(delCtx, delPayload)
-
-        // 2. Restore arrives at HLC 30 with ALL domain fields null
-        val fieldLessRestore = deletion.withDeleteState(false).copy(
-            hlc = hlc30,
-            textValue = null,
-            countValue = null
-        )
-        val (resCtx, resPayload) = makeRemoteIntent(
-            fieldLessRestore,
-            deletion,
-            hlc30,
-            MutationOp.UPSERT
-        )
-        repo.processRemoteIntent(resCtx, resPayload)
-
-        val stored = repo.storedEntities[candidateKey]
-        assertNotNull(stored)
-        assertFalse(
-            stored.isDeleted,
-            "Structural tags keep entity alive even with null domain fields"
-        )
-        assertNull(stored.textValue)
-        assertNull(stored.countValue)
-        assertEquals(hlc30, stored.hlc)
-    }
-
-    @Test
-    fun legacyActiveRow_processesSubsequentRemoteUpsertWithoutFalseDeletion() = runEnv {
-        setupValidContext()
-        val candidateKey = 209L
-
-        val hlc10 = TestHlcFactory.createWithOffset((-50).minutes)
-        val hlc30 = TestHlcFactory.createWithOffset((-30).minutes)
-
-        val legacyEntity = FeatureEntity(
-            id = candidateKey,
-            hlc = hlc10,
-            isDeleted = false,
-            textValue = "LEGACY_TEXT",
-            countValue = 10
-        )
-        repo.seed(legacyEntity)
-
-        // Subsequent update arrives modifying a single field
-        val update = legacyEntity.copy(hlc = hlc30, countValue = 20)
-        val (editCtx, editPayload) = makeRemoteIntent(
-            update,
-            legacyEntity,
-            hlc30,
-            MutationOp.UPSERT
-        )
-        repo.processRemoteIntent(editCtx, editPayload)
-
-        val stored = repo.storedEntities[candidateKey]
-        assertNotNull(stored)
-        assertFalse(
-            stored.isDeleted,
-            "Active entity must remain active after subsequent partial sync"
-        )
-        assertEquals("LEGACY_TEXT", stored.textValue)
-        assertEquals(20, stored.countValue)
-        assertEquals(hlc30, stored.hlc)
-    }
 
     @Test
     fun localOperations_upsertAndDelete_updateStoreAndDispatchIntents() = runEnv {
@@ -345,25 +101,24 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     // -----------------------------------------------------------
 
     @Test
-    fun awaitReady_onCriticalFailureWithException_unwrapsAndThrowsException() =
-        runEnv {
-            val rootCause = IllegalStateException("Corrupt local database")
-            bootProvider.updateState(
-                BootState.LockOut(
-                    message = "DB_CORRUPT", cause = rootCause
-                )
+    fun awaitReady_onCriticalFailureWithException_unwrapsAndThrowsException() = runEnv {
+        val rootCause = IllegalStateException("Corrupt local database")
+        bootProvider.updateState(
+            BootState.LockOut(
+                message = "DB_CORRUPT", cause = rootCause
             )
+        )
 
-            val thrown = assertFailsWith<IllegalStateException> {
-                repo.delete(5L)
-            }
-
-            assertEquals("Corrupt local database", thrown.message)
+        val thrown = assertFailsWith<IllegalStateException> {
+            repo.delete(5L)
         }
+
+        assertEquals("Corrupt local database", thrown.message)
+    }
 
     @Test
     fun awaitReady_whenInitializingOrIdle_suspendsUntilTransitionToActive() = runEnv {
-        hlcFactory.hydrate(null, TestNodeId.A)
+        hlcFactory.hydrate(null, com.mochame.utils.fixtures.TestNodeId.A)
         bootProvider.updateState(BootState.Init)
         repo.seed(FeatureEntity(id = 1L))
 
@@ -413,10 +168,8 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     }
 
     // -----------------------------------------------------------
-    // LOCAL PIPELINE
+    // LOCAL MUTATIONS & FIELD DIFFING
     // -----------------------------------------------------------
-
-    // FAKING SERIALIZATION / FIELD DIFFING ----------------------
 
     @Test
     fun localUpsert_onNewEntity_stampsHlc_recordsPendingIntent_andNotifiesWorker() = runEnv {
@@ -428,14 +181,12 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
 
         assertEquals(101L, result)
 
-        // Verify entity state in repository
         val stored = repo.storedEntities[candidateKey]
         assertNotNull(stored, "Stored entity")
         assertEquals("NEW_ITEM", stored.textValue, "Text value")
         assertEquals(1, hlcFactory.getNextHlcCallCount, "HLC call count")
         assertEquals(stored.hlc, nodeManager.getMaxHlc(), "Max HLC")
 
-        // Verify SyncIntent record
         val recordedIntents = intentStore.intents
         assertEquals(1, recordedIntents.size, "Intent count")
         val intent = recordedIntents.first()
@@ -446,13 +197,11 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertNotNull(intent.payload, "Payload")
         assertEquals(null, intent.overflowBlobId, "Overflow blob ID")
 
-        // Verify dispatched worker post commit
         assertEquals(1, workerHook.invalidationCount, "Invalidation Hook")
     }
 
     @Test
     fun localDelete_onExistingActiveEntity_recordsDeletionIntent_andPersists() = runEnv {
-        // Given
         setupValidContext()
         val candidateKey = 104L
         val initialHlc = hlcFactory.getNextHlc()
@@ -464,10 +213,8 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         )
         repo.seed(activeEntity)
 
-        // When
         val result = repo.delete(candidateKey)
 
-        // Then
         assertEquals(104L, result)
         val stored = repo.storedEntities[candidateKey]
         assertNotNull(stored)
@@ -516,36 +263,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun processRemoteIntent_whenExistingIsNullAndOpIsDelete_skipsGracefullyWithoutRecordingIntent() =
-        runEnv {
-            setupValidContext()
-            val candidateKey = 112L
-
-            // Device B: Remote delete intent for record only present in local state
-            val remoteHlc = TestHlcFactory.createWithOffset((-1).minutes)
-            val decodeContext = DecodeContext(
-                candidateKey = candidateKey,
-                hlc = remoteHlc,
-                op = MutationOp.DELETE,
-                featureSchemaVersion = 1,
-                changedMask = 0L
-            )
-
-            // Device A: ingesting remote intent
-            repo.processRemoteIntent(decodeContext, FakeFeatureCodec.BYTES_PRESET)
-
-            // Final State Assertions
-            val stored = repo.storedEntities[candidateKey]
-            assertEquals(null, stored, "No entity should be created or stored")
-            assertTrue(writer.logs.any { "Non-existent local record" in it.message })
-            // Side-effect Assertions
-            assertEquals(0, intentStore.intents.size, "No intents recorded")
-            assertEquals(0, workerHook.invalidationCount, "No worker invalidation triggered")
-        }
-
-    // INTEGRATED SERIALIZATION / FIELD DIFFING ------------------
-
-    @Test
     fun localUpsert_onExistingEntity_computesFieldDiff_andStampsUpdatedFieldHlcs() = runEnv {
         setupValidContext()
         val integratedRepo = createCodecIntegratedRepo()
@@ -561,7 +278,7 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         integratedRepo.seed(initialEntity)
 
         val result = integratedRepo.upsert(candidateKey) { existing ->
-            existing!!.copy(textValue = "UPDATED") // diff encodes proto tag 4
+            existing!!.copy(textValue = "UPDATED")
         }
 
         assertEquals(102L, result)
@@ -572,7 +289,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertEquals(10, updated.countValue)
         assertTrue(updated.hlc > initialHlc)
         assertNotEquals(updated.fieldHlcs, initialEntity.fieldHlcs)
-        assertTrue(writer.logs.any { "OP:UPSERT [4]" in it.message })
 
         val recordedIntents = intentStore.intents
         assertEquals(1, recordedIntents.size)
@@ -596,11 +312,9 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
             )
             integratedRepo.seed(initialEntity)
 
-            // localUpsert computes exact same state -> changeMask is 0 so skips
             val result = integratedRepo.upsert(candidateKey) { initialEntity }
 
             assertEquals(0L, result)
-            assertTrue(writer.logs.any { "Skipping" in it.message })
             assertEquals(0, intentStore.intents.size)
             assertEquals(0, workerHook.invalidationCount)
             assertEquals(2, hlcFactory.getNextHlcCallCount)
@@ -613,7 +327,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         val initialHlc = TestHlcFactory.createWithOffset(offset = (-1).minutes)
         setupValidContext()
 
-        // Initial State & Deletion
         val initialEntity = FeatureEntity(
             id = candidateKey,
             hlc = initialHlc,
@@ -628,7 +341,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertNotNull(deletedEntity, "Deleted state must exist prior to restore")
         assertTrue(deletedEntity.isDeleted, "Entity is deleted")
 
-        // Restoration via localUpsert
         val result = integratedRepo.upsert(candidateKey) { existing ->
             existing!!.copy(
                 isDeleted = false,
@@ -638,7 +350,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         }
         assertEquals(candidateKey, result)
 
-        // Verify restored entity
         val stored = integratedRepo.storedEntities[candidateKey]
         assertNotNull(stored, "Stored entity exists after restore")
         assertEquals(false, stored.isDeleted, "Deletion status is restored")
@@ -647,7 +358,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertTrue(stored.hlc > deletedEntity.hlc, "HLC to be updated")
         assertNotEquals(deletedEntity.fieldHlcs, stored.fieldHlcs, "Field HLCs must be updated")
 
-        // Verify SyncIntent generation
         assertEquals(2, intentStore.intents.size, "Contains delete and subsequent restore intents")
         val restoreIntent = intentStore.intents.last()
         assertEquals(MutationOp.UPSERT, restoreIntent.operation)
@@ -655,173 +365,11 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertEquals(stored.hlc, restoreIntent.hlc)
         assertNotNull(restoreIntent.payload, "Payload contains encoded restore delta")
 
-        // Verify side-effects
         assertEquals(2, workerHook.invalidationCount, "Invalidation triggered twice")
     }
 
-    @Test
-    fun processRemoteIntent_whenLocalDeleteIsMoreRecentThanIncomingUpsert_preservesDeletionWhileMergingFieldValues() =
-        runEnv {
-            val integratedRepo = createCodecIntegratedRepo()
-            val candidateKey = 107L
-            val deletionHlc = TestHlcFactory.createWithOffset((-1).minutes)
-            setupValidContext()
-
-            // Device A: local delete
-            val initialEntity = FeatureEntity(
-                id = candidateKey,
-                hlc = deletionHlc,
-                isDeleted = false,
-                textValue = "INITIAL_DELETED_TEXT",
-                countValue = 10
-            )
-            integratedRepo.seed(initialEntity)
-            integratedRepo.delete(candidateKey)
-            val deletedEntity = integratedRepo.storedEntities[candidateKey]!!
-            assertTrue(deletedEntity.fieldHlcs.isNotEmpty())
-
-            // Device B: remote upsert
-            val remoteState = FeatureEntity(
-                id = candidateKey,
-                hlc = TestHlcFactory.createWithOffset((-2).minutes),
-                textValue = "REMOTE_UPDATED_TEXT",
-                countValue = 10
-            )
-            val payload = integratedCodec.encode(remoteState, null)
-            val changedTags = integratedCodec.computeChangedTags(remoteState, null)
-            val decodeContext = remoteState.deriveContext(changedMask = changedTags.toBitmask())
-            assertNotNull(payload, "Payload before processRemoteIntent")
-
-            // Device A: Ingest remote intent
-            integratedRepo.processRemoteIntent(decodeContext, payload)
-            val finalEntity = integratedRepo.storedEntities[candidateKey]
-            assertNotNull(finalEntity, "Stored after processRemoteIntent")
-
-            // Verify final state
-            assertTrue(finalEntity.isDeleted, "Deletion status preserved")
-            assertNull(finalEntity.textValue)
-            assertNull(finalEntity.countValue)
-            assertEquals(deletedEntity.fieldHlcs, finalEntity.fieldHlcs)
-
-            // Verify side-effects
-            assertEquals(1, intentStore.intents.size, "Only local deletion.")
-            assertEquals(1, workerHook.invalidationCount, "Only local deletion.")
-        }
-
-    @Test
-    fun processRemoteIntent_whenIncomingUpsertIsMoreRecentThanDelete_shouldRestoreEntityAndApplyFieldDiff() =
-        runEnv {
-            val integratedRepo = createCodecIntegratedRepo()
-            val candidateKey = 108L
-            val initialHlc = TestHlcFactory.create()
-            setupValidContext(initialHlc)
-
-            // Device A: Seed active entity and perform local delete
-            val initialEntity = FeatureEntity(
-                id = candidateKey,
-                hlc = initialHlc,
-                isDeleted = false,
-                textValue = "INITIAL_FILLED_TEXT",
-                countValue = 10
-            )
-            integratedRepo.seed(initialEntity)
-            integratedRepo.delete(candidateKey)
-
-            val deletedEntity = integratedRepo.storedEntities[candidateKey]
-            assertNotNull(deletedEntity, "Deleted entity must exist locally")
-            assertTrue(deletedEntity.isDeleted, "Entity is locally deleted")
-
-            // Device B: More recent remote upsert
-            val remoteState = FeatureEntity(
-                id = candidateKey,
-                hlc = TestHlcFactory.createWithOffset(10.seconds),
-                isDeleted = false,
-                textValue = null,
-                countValue = 10
-            )
-            val payload = integratedCodec.encode(remoteState, deletedEntity)
-            val changedTags = integratedCodec.computeChangedTags(remoteState, deletedEntity)
-            val decodeContext = remoteState.deriveContext(changedMask = changedTags.toBitmask())
-            assertNotNull(payload, "Payload before processRemoteIntent")
-
-            // Device A: Ingest remote intent
-            integratedRepo.processRemoteIntent(decodeContext, payload)
-            val finalEntity = integratedRepo.storedEntities[candidateKey]
-            assertNotNull(finalEntity, "Stored after processRemoteIntent")
-
-            // Final State
-            assertFalse(finalEntity.isDeleted, "Entity restored after remote upsert")
-            assertEquals(null, finalEntity.textValue, "Text value to be blank")
-            assertEquals(initialEntity.countValue, finalEntity.countValue)
-            assertNotEquals(deletedEntity.fieldHlcs, finalEntity.fieldHlcs)
-
-            // Side-effects
-            assertEquals(1, intentStore.intents.size, "Only local deletion intent")
-            assertEquals(1, workerHook.invalidationCount, "Only local deletion invalidation")
-            assertEquals(1, hlcFactory.getNextHlcCallCount, "Only local delete hlc")
-        }
-
-    @Test
-    fun processRemoteIntent_whenIncomingUpsertCaughtBetweenTwoLocalUpserts_mergesFieldsCorrectly() =
-        runEnv {
-            fakeClock.reverseTime(3.minutes)
-            val integratedRepo = createCodecIntegratedRepo()
-            val candidateKey = 109L
-            val initialHlc = TestHlcFactory.createWithOffset((-3).minutes)
-            setupValidContext(initialHlc)
-
-            // Initial State at T0 (-3.minutes)
-            val initialEntity = FeatureEntity(
-                id = candidateKey,
-                hlc = initialHlc,
-                isDeleted = false,
-                textValue = "INITIAL_TEXT",
-                countValue = 10
-            )
-            integratedRepo.seed(initialEntity)
-
-            // Device B: Encodes a single-field mutation (tag 4) at T1 (-2.minutes)
-            val remoteState = initialEntity.copy(
-                hlc = TestHlcFactory.createWithOffset((-2).minutes),
-                textValue = "REMOTE_UPDATED_TEXT",
-                countValue = 20
-            )
-            val payload = integratedCodec.encode(remoteState, initialEntity)
-            val decodeContext = remoteState.deriveContext(changedMask = bitmaskOf(4, 5))
-            assertNotNull(payload, "Payload before processRemoteIntent")
-
-            // Device A: Performs local mutation to a separate field (tag 5) at T2 (> T1)
-            fakeClock.advanceTime(3.minutes)
-            val localResult = integratedRepo.upsert(candidateKey) { existing ->
-                existing!!.copy(countValue = 99)
-            }
-            assertEquals(candidateKey, localResult)
-            val localEntityBeforeRemote = integratedRepo.storedEntities[candidateKey]
-            assertNotNull(localEntityBeforeRemote)
-            assertEquals("INITIAL_TEXT", localEntityBeforeRemote.textValue)
-            assertEquals(99, localEntityBeforeRemote.countValue)
-
-            // Device A: Receives and ingests Device B's remote intent from T1
-            integratedRepo.processRemoteIntent(decodeContext, payload)
-            val finalEntity = integratedRepo.storedEntities[candidateKey]
-            assertNotNull(finalEntity, "Stored after processRemoteIntent")
-
-            // Final state assertions:
-            // - Remote textValue (T1 > T0) is accepted and merged
-            // - Local countValue (T2 > T0) is preserved
-            assertEquals("REMOTE_UPDATED_TEXT", finalEntity.textValue)
-            assertEquals(99, finalEntity.countValue, "Count value preserved")
-            assertFalse(finalEntity.isDeleted)
-            assertNotEquals(initialEntity.fieldHlcs, finalEntity.fieldHlcs)
-            assertTrue(writer.logs.any { "Field Rejected [tag=5]" in it.message })
-
-            // Side-effect Assertions: Inbound remote processing dispatches no extra intents or signals
-            assertEquals(1, intentStore.intents.size, "Only local upsert intent recorded")
-            assertEquals(1, workerHook.invalidationCount, "Only local upsert invalidation")
-        }
-
     // -----------------------------------------------------------
-    // STAGING
+    // COMMIT & OVERFLOW STAGING
     // -----------------------------------------------------------
 
     @Test
@@ -873,7 +421,7 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertNotNull(blobId, "Overflow payload must assign an overflowBlobId")
 
         // Side-effect verification
-        assertTrue(deps.blobStore.existsInCommitted(blobId!!))
+        assertTrue(blobStore.existsInCommitted(blobId))
         assertEquals(1, workerHook.invalidationCount)
     }
 
@@ -915,7 +463,7 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
 
         assertEquals(0, intentStore.intents.size, "No intent recorded after rollback")
         assertEquals(0, workerHook.invalidationCount, "Worker must not be notified on rollback")
-        assertEquals(0, deps.blobStore.listPendingHashes().size, "blob must be aborted")
+        assertEquals(0, blobStore.listPendingHashes().size, "blob must be aborted")
     }
 
     @Test
@@ -939,8 +487,9 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertNotNull(integratedRepo.storedEntities[candidateKey], "Local entity remains persisted")
     }
 
+
     // -----------------------------------------------------------
-    // CONTENTION / CONCURRENCY
+    // KEYED LOCKER CONCURRENCY
     // -----------------------------------------------------------
 
     @Test
@@ -990,6 +539,30 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
+    fun keyedLocker_cleansUpRegistryAndReleasesLockOnThrownExceptionAndRepoPropagates() = runEnv {
+        setupValidContext()
+        val candidateKey = 304L
+
+        // Force an exception inside the locked execution block
+        assertFailsWith<MochaException.Transient.StateIssue> {
+            repo.upsert(candidateKey) {
+                throw IllegalStateException("Domain validation failure")
+            }
+        }
+        assertNull(locker.activeUsersFor(repo.featureContext, candidateKey))
+        assertEquals(0, locker.activeKeysCount)
+
+        // Subsequent success with no deadlock
+        val result = repo.upsert(candidateKey) {
+            FeatureEntity(id = candidateKey, textValue = "RECOVERED")
+        }
+
+        assertEquals(candidateKey, result)
+        assertEquals("RECOVERED", repo.storedEntities[candidateKey]?.textValue)
+        assertEquals(0, locker.activeKeysCount)
+    }
+
+    @Test
     fun keyedLocker_allowsParallelExecutionAcrossDistinctCandidateKeys() = runEnv { scope ->
         setupValidContext()
         val keyA = 302L
@@ -1031,29 +604,6 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
         assertEquals(0, locker.activeKeysCount)
     }
 
-    @Test
-    fun keyedLocker_cleansUpRegistryAndReleasesLockOnThrownExceptionAndRepoPropagates() = runEnv {
-        setupValidContext()
-        val candidateKey = 304L
-
-        // Force an exception inside the locked execution block
-        assertFailsWith<MochaException.Transient.StateIssue> {
-            repo.upsert(candidateKey) {
-                throw IllegalStateException("Domain validation failure")
-            }
-        }
-        assertNull(locker.activeUsersFor(repo.featureContext, candidateKey))
-        assertEquals(0, locker.activeKeysCount)
-
-        // Subsequent success with no deadlock
-        val result = repo.upsert(candidateKey) {
-            FeatureEntity(id = candidateKey, textValue = "RECOVERED")
-        }
-
-        assertEquals(candidateKey, result)
-        assertEquals("RECOVERED", repo.storedEntities[candidateKey]?.textValue)
-        assertEquals(0, locker.activeKeysCount)
-    }
 
     @Test
     fun staggeredDbRetryPolicy_withConcurrentUpsertDuringRetry_serializesAndMergesBothMutations() =
@@ -1179,5 +729,4 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
             assertEquals(totalExpectedIntents, workerHook.invalidationCount)
             assertEquals(totalExpectedIntents + 1, hlcFactory.getNextHlcCallCount)
         }
-
 }

@@ -3,8 +3,8 @@ package com.mochame.server.relay
 import com.mochame.server.database.ServerDatabase
 import com.mochame.server.utils.ServerConfig
 import com.mochame.server.utils.ServerLogger
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.WireFrameFactory
+import com.mochame.sync.api.network.WireFrame
+import com.mochame.sync.api.network.WireFrameFactory
 import com.mochame.utils.fixtures.FakeTimeUtils
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.FunSpec

@@ -7,8 +7,8 @@ import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.metadata.SyncStatus
 import com.mochame.sync.api.hlc.HLC
-import com.mochame.sync.spi.models.SyncIntent
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodec
+import com.mochame.sync.domain.model.SyncIntent
+import com.mochame.sync.domain.serialization.IntentCodec
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoBuf

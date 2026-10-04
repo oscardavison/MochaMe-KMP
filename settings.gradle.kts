@@ -51,7 +51,7 @@ include(":core:test:test-logger")
 include(":core:test:fixtures-node")
 include(":core:test:fixtures-utils")
 include(":core:test:fixtures-platform")
-include(":core:test:fixtures-sync")
+include(":core:test:fixtures-sync-api")
 
 include(":node")
 include(":sync-engine")

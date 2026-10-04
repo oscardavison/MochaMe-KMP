@@ -1,8 +1,8 @@
 package com.mochame.sync.internal.fixtures.serialization
 
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodec
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.serialization.IntentCodec
+import com.mochame.sync.domain.model.SyncIntent
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import org.koin.core.annotation.Single

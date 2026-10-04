@@ -15,8 +15,8 @@ import com.mochame.sync.infrastructure.serialization.IntentCodecV1
 import com.mochame.sync.internal.fixtures.serialization.FakeBatchCodec
 import com.mochame.sync.internal.fixtures.serialization.FakeIntentCodec
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecRouterFixture
-import com.mochame.sync.spi.infrastructure.serialization.BatchCodecRouter
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodecRouter
+import com.mochame.sync.domain.serialization.BatchCodecRouter
+import com.mochame.sync.domain.serialization.IntentCodecRouter
 import com.mochame.utils.fixtures.di.FakeTimeProviderModule
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory

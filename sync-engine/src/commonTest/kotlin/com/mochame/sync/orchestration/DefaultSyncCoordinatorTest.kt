@@ -18,15 +18,13 @@ import com.mochame.sync.di.coordinator.SyncCoordinatorTestEnv
 import com.mochame.sync.domain.model.deriveContext
 import com.mochame.sync.internal.fixtures.api.ReceivedIntent
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
-import com.mochame.sync.spi.network.SendResult
+import com.mochame.sync.api.network.SendResult
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin

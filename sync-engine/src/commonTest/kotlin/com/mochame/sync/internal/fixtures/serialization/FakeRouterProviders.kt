@@ -5,9 +5,9 @@ import com.mochame.sync.infrastructure.serialization.BatchCodecV1
 import com.mochame.sync.infrastructure.serialization.DefaultBatchCodecRouter
 import com.mochame.sync.infrastructure.serialization.DefaultIntentCodecRouter
 import com.mochame.sync.infrastructure.serialization.IntentCodecV1
-import com.mochame.sync.spi.infrastructure.serialization.BatchCodec
-import com.mochame.sync.spi.infrastructure.serialization.BatchCodecRouter
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodecRouter
+import com.mochame.sync.domain.serialization.BatchCodec
+import com.mochame.sync.domain.serialization.BatchCodecRouter
+import com.mochame.sync.domain.serialization.IntentCodecRouter
 
 /**
  * Always of format -  registry = arrayOf(null, this, v2), with the latest version being the last index.

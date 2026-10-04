@@ -7,40 +7,48 @@ import com.mochame.bio.domain.DailyContextRepository
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.api.repository.LocalFirstDependencies
+import com.mochame.sync.api.repository.LocalFirstEngine
 import com.mochame.sync.api.repository.LocalFirstRepository
 import com.mochame.sync.spi.infrastructure.SyncReceiver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
-
+/**
+ * Default implementation of [DailyContextRepository] for local-first daily context data.
+ * Extends [LocalFirstRepository] to leverage [LocalFirstEngine] for state persistence,
+ * HLC stamping, and sync integration.
+ *
+ * @param dailyContextDao Room DAO for bio daily context persistence.
+ * @param codecRouter Codec router for bio domain entities.
+ * @param logger Kermit logger instance.
+ * @param engine Local-first engine handling mutations and sync pipelines.
+ */
 @Single([DailyContextRepository::class, SyncReceiver::class])
 class DefaultDailyContextRepository(
     private val dailyContextDao: DailyContextDao,
     codecRouter: DailyContextCodecRouter,
     logger: Logger,
-    deps: LocalFirstDependencies
+    engine: LocalFirstEngine
 ) : LocalFirstRepository<DailyContext>(
     FeatureContext.BIO_DAILY_CONTEXT,
-    deps,
+    engine,
     codecRouter,
     logger = logger.withTags(LogTags.Layer.REPO, LogTags.Domain.BIO, "BioRep")
 ), DailyContextRepository {
 
     override suspend fun upsertContext(context: DailyContext) =
-        localUpsert(context.id) { existing ->
+        syncUpsert(context.id) { existing ->
             compactState(context, existing)
         }
 
-    override suspend fun softDeleteContext(epochDay: Long) = localDelete(candidateKey = epochDay)
+    override suspend fun softDeleteContext(epochDay: Long) = syncDelete(candidateKey = epochDay)
 
     override fun observeContext(epochDay: Long): Flow<DailyContext?> =
         dailyContextDao.observeContext(epochDay).map { it?.toDomain() }
 
     override suspend fun getContext(epochDay: Long): DailyContext? =
         dailyContextDao.getActiveContextById(epochDay)?.toDomain()
-
 
     // --- MAINTENANCE / SYNC ---
     override suspend fun hardDeleteContexts(cutoff: Long) =
@@ -69,4 +77,3 @@ class DefaultDailyContextRepository(
         createdAt = newState.createdAt
     )
 }
-

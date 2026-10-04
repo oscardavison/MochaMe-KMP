@@ -2,8 +2,8 @@ package com.mochame.sync.infrastructure.stores
 
 import com.mochame.sync.data.QuarantinedPayloadDao
 import com.mochame.sync.data.QuarantinedPayloadEntity
-import com.mochame.sync.spi.domain.QuarantinedPayloadStore
-import com.mochame.sync.spi.models.QuarantinedPayload
+import com.mochame.sync.domain.stores.QuarantinedPayloadStore
+import com.mochame.sync.domain.model.QuarantinedPayload
 import com.mochame.utils.interfaces.TimeUtils
 import org.koin.core.annotation.Single
 

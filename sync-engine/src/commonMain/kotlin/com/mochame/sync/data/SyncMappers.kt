@@ -1,7 +1,7 @@
 package com.mochame.sync.data
 
 import com.mochame.sync.api.hlc.HLC
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.model.SyncIntent
 
 internal fun SyncIntentEntity.toDomain(): SyncIntent = SyncIntent(
     hlc = HLC.parse(hlc),

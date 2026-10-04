@@ -1,9 +1,9 @@
 package com.mochame.sync.spi
 
 import com.mochame.support.MochaPlatformTest
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.WireFrameFactory
-import com.mochame.sync.spi.network.encode
+import com.mochame.sync.api.network.WireFrame
+import com.mochame.sync.api.network.WireFrameFactory
+import com.mochame.sync.api.network.encode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

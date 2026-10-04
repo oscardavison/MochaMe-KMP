@@ -17,10 +17,10 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
         }
         commonTest.dependencies {
-            implementation(project(":core:test:fixtures-sync"))
             implementation(project(":core:test:fixtures-utils"))
             implementation(project(":core:test:fixtures-platform"))
             implementation(project(":core:test:fixtures-node"))
+            implementation(project(":core:test:fixtures-sync-api"))
         }
     }
 }

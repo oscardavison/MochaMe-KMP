@@ -4,7 +4,7 @@ import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.api.repository.LocalFirstDependencies
+import com.mochame.sync.api.repository.LocalFirstEngine
 import com.mochame.sync.api.repository.LocalFirstRepository
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodecRouter
@@ -13,12 +13,12 @@ import kotlinx.atomicfu.locks.withLock
 
 internal class FeatureRepositoryFixture(
     featureContext: FeatureContext,
-    deps: LocalFirstDependencies,
+    engine: LocalFirstEngine,
     codecRouter: BaseFeatureCodecRouter<FeatureEntity>,
     logger: Logger
 ) : LocalFirstRepository<FeatureEntity>(
     featureContext = featureContext,
-    deps = deps,
+    engine = engine,
     codec = codecRouter,
     logger = logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "FeaRep")
 ) {
@@ -37,10 +37,9 @@ internal class FeatureRepositoryFixture(
     suspend fun upsert(
         candidateKey: Long,
         computeChange: suspend (FeatureEntity?) -> FeatureEntity
-    ): Long =
-        localUpsert(candidateKey = candidateKey) { existing -> computeChange(existing) }
+    ): Long = syncUpsert(candidateKey = candidateKey) { existing -> computeChange(existing) }
 
-    suspend fun delete(candidateKey: Long): Long = localDelete(candidateKey)
+    suspend fun delete(candidateKey: Long): Long = syncDelete(candidateKey)
 
     override suspend fun fetchAny(id: Long): FeatureEntity? =
         lock.withLock { memoryStore[id] }
@@ -54,4 +53,5 @@ internal class FeatureRepositoryFixture(
         newState: FeatureEntity,
         existing: FeatureEntity?
     ): FeatureEntity = newState
+
 }

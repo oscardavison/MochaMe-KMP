@@ -28,7 +28,8 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
     /**
      * Returns the [HLC] recorded for [tagId], or `null` if the tag has not been recorded.
      */
-    fun getHlc(tagId: Int): HLC? {
+    @PublishedApi
+    internal fun getHlc(tagId: Int): HLC? {
         require(tagId in 0..127)
 
         val index = findTagIndex(tagId) ?: return null
@@ -38,7 +39,8 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
     /**
      * Returns a new [FieldHlcMap] with [tagId] updated in place or appended at [hlc].
      */
-    fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap {
+    @PublishedApi
+    internal fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap {
         require(tagId in 0..127)
 
         val index = findTagIndex(tagId)

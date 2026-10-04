@@ -16,11 +16,11 @@ import com.mochame.sync.api.metadata.SyncStatus
 import com.mochame.sync.domain.config.JanitorMaintenanceConfig
 import com.mochame.sync.domain.usecase.PruneIntentsUseCase
 import com.mochame.sync.spi.boot.BootStatusUpdater
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
-import com.mochame.sync.spi.infrastructure.BlobStore
-import com.mochame.sync.spi.infrastructure.SyncWorkerHook
+import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
+import com.mochame.sync.domain.stores.BlobStore
+import com.mochame.sync.domain.infrastructure.SyncWorkerHook
 import com.mochame.sync.spi.infrastructure.TransactionProvider
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.model.SyncIntent
 import com.mochame.sync.spi.node.NodeContext
 import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.orchestration.SyncJanitor

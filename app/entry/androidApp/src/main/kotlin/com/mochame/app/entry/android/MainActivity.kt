@@ -9,6 +9,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.mochame.annotations.AppMainScope
 import com.mochame.app.ui.MochaComposeAppShell
 import com.mochame.app.ui.di.initKoinCompose
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +26,7 @@ class AndroidLifecycleModule {
     @Single
     @AppMainScope
     fun provideAppMainScope(): CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + CoroutineName("AppMainScope"))
 }
 
 class MainActivity : ComponentActivity() {

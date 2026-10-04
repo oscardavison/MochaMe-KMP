@@ -8,7 +8,7 @@ import co.touchlab.kermit.TestLogWriter
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.domain.TEST_PRUNE_DAYS
 import com.mochame.sync.domain.usecase.PruneIntentsUseCase
-import com.mochame.sync.fixtures.FakeSyncIntentStore
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.di.FakeTimeProviderModule
 import org.koin.core.annotation.ComponentScan

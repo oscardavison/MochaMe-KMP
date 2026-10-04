@@ -16,7 +16,7 @@ import com.mochame.sync.di.SyncConcurrencyModule
 import com.mochame.sync.di.SyncOrchestrationModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.internal.fixtures.FakeQuarantinedPayloadStore
-import com.mochame.sync.fixtures.FakeSyncIntentStore
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncTransport
 import com.mochame.sync.internal.fixtures.api.FakeSyncReceiver
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
@@ -25,9 +25,9 @@ import com.mochame.sync.internal.fixtures.serialization.FakeIntentCodec
 import com.mochame.sync.internal.fixtures.serialization.FakePayloadCodec
 import com.mochame.sync.orchestration.DefaultSyncCoordinator
 import com.mochame.sync.spi.infrastructure.SyncReceiver
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodec
-import com.mochame.sync.spi.infrastructure.serialization.PayloadCodec
-import com.mochame.sync.spi.network.SyncTransport
+import com.mochame.sync.domain.serialization.IntentCodec
+import com.mochame.sync.domain.serialization.PayloadCodec
+import com.mochame.sync.api.network.SyncTransport
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module

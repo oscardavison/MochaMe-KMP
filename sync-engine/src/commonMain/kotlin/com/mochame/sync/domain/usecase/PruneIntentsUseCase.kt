@@ -2,7 +2,7 @@ package com.mochame.sync.domain.usecase
 
 import co.touchlab.kermit.Logger
 import com.mochame.utils.interfaces.TimeUtils
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
+import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.logger.withTimer
@@ -18,7 +18,7 @@ import kotlin.time.TimeSource
  * [DEFAULT_PRUNE_DAYS].
  *
  * The method responsible for the pruning process is [com.mochame.sync.data.SyncIntentDao.pruneByCutOff] -
- * defining that the cut-off is based on the [com.mochame.sync.spi.models.SyncIntent.createdAt] field, requiring
+ * defining that the cut-off is based on the [com.mochame.sync.domain.model.SyncIntent.createdAt] field, requiring
  * a status representing synchronization success provided by the server.
  */
 @Single

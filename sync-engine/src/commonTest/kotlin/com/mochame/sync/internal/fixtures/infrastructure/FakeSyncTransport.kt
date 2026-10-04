@@ -1,8 +1,8 @@
 package com.mochame.sync.internal.fixtures.infrastructure
 
-import com.mochame.sync.spi.network.NetworkConfig
-import com.mochame.sync.spi.network.SendResult
-import com.mochame.sync.spi.network.SyncTransport
+import com.mochame.sync.api.network.NetworkConfig
+import com.mochame.sync.api.network.SendResult
+import com.mochame.sync.api.network.SyncTransport
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 

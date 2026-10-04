@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.koin.compiler)
 }
 
-val appVersion = "0.1.0"
+val appVersion = "0.1.1"
 
 base {
     archivesName.set("mochame-v${appVersion}")

@@ -2,8 +2,8 @@ package com.mochame.sync.common
 
 import co.touchlab.kermit.Logger
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.sync.spi.infrastructure.VersionRouter
-import com.mochame.sync.spi.infrastructure.getCodec
+import com.mochame.sync.spi.infrastructure.serialization.VersionRouter
+import com.mochame.sync.spi.infrastructure.serialization.getCodec
 
 // -------------------------------------------------------------------
 // CURRENTLY NOT IN USE - SWITCHED TO INT FOR VERSIONING

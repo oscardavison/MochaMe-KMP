@@ -1,8 +1,8 @@
 package com.mochame.sync.internal.fixtures.serialization
 
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
-import com.mochame.sync.spi.infrastructure.serialization.BatchCodec
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.serialization.BatchCodec
+import com.mochame.sync.domain.model.SyncIntent
 import org.koin.core.annotation.Single
 
 

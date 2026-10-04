@@ -4,7 +4,7 @@ import co.touchlab.kermit.Logger
 import com.mochame.server.database.ServerDatabase
 import com.mochame.server.utils.ServerConfig
 import com.mochame.server.utils.ServerLogger
-import com.mochame.sync.spi.network.WireFrameFactory
+import com.mochame.sync.api.network.WireFrameFactory
 import io.ktor.websocket.CloseReason.Codes.INTERNAL_ERROR
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.CoroutineDispatcher

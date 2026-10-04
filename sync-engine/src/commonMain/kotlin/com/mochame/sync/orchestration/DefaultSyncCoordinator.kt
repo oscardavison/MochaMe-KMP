@@ -14,16 +14,16 @@ import com.mochame.sync.api.hlc.HlcFactory
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.SyncStatus
 import com.mochame.sync.domain.model.deriveContext
-import com.mochame.sync.spi.domain.QuarantinedPayloadStore
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
+import com.mochame.sync.domain.stores.QuarantinedPayloadStore
+import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
 import com.mochame.sync.spi.infrastructure.SyncReceiver
-import com.mochame.sync.spi.infrastructure.SyncWorkerHook
+import com.mochame.sync.domain.infrastructure.SyncWorkerHook
 import com.mochame.sync.spi.infrastructure.TransactionProvider
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodec
-import com.mochame.sync.spi.infrastructure.serialization.PayloadCodec
-import com.mochame.sync.spi.models.SyncIntent
-import com.mochame.sync.spi.network.SendResult
-import com.mochame.sync.spi.network.SyncTransport
+import com.mochame.sync.domain.serialization.IntentCodec
+import com.mochame.sync.domain.serialization.PayloadCodec
+import com.mochame.sync.domain.model.SyncIntent
+import com.mochame.sync.api.network.SendResult
+import com.mochame.sync.api.network.SyncTransport
 import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.orchestration.SyncCoordinator
 import com.mochame.sync.spi.policy.ExecutionPolicy
@@ -32,7 +32,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
@@ -129,7 +128,6 @@ internal class DefaultSyncCoordinator(
         }
     }
 
-    @OptIn(FlowPreview::class)
     override suspend fun processQueueUntilExhausted() {
         coordinatorMutex.withLock {
 

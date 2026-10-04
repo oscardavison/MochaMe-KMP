@@ -10,7 +10,7 @@ import com.mochame.logger.withTags
 import com.mochame.logger.withTimer
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.exceptions.toMochaException
-import com.mochame.sync.spi.infrastructure.BlobStore
+import com.mochame.sync.domain.stores.BlobStore
 import com.mochame.sync.spi.infrastructure.DigestFactory
 import com.mochame.sync.spi.infrastructure.digestHex
 import com.mochame.utils.interfaces.TimeUtils
@@ -86,7 +86,7 @@ internal class DefaultBlobStore(
 
         ensureDirectoriesExist()
 
-        try {
+        try { // Thread local buffer provider?
             // Read the source, write to sink, through a buffer
             fileSystem.sink(tempPath).buffered().use { sink ->
                 val buffer = Buffer()

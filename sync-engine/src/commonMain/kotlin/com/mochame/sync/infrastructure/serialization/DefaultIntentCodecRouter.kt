@@ -3,11 +3,11 @@ package com.mochame.sync.infrastructure.serialization
 import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodec
-import com.mochame.sync.spi.infrastructure.serialization.IntentCodecRouter
-import com.mochame.sync.spi.infrastructure.getCodec
-import com.mochame.sync.spi.infrastructure.latestCodec
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.serialization.IntentCodec
+import com.mochame.sync.domain.serialization.IntentCodecRouter
+import com.mochame.sync.spi.infrastructure.serialization.getCodec
+import com.mochame.sync.spi.infrastructure.serialization.latestCodec
+import com.mochame.sync.domain.model.SyncIntent
 import org.koin.core.annotation.Single
 
 @Single(binds = [IntentCodecRouter::class])

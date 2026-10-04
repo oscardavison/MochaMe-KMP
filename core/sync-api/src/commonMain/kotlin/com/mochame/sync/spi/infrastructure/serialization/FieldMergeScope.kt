@@ -17,10 +17,10 @@ import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Compan
  */
 class FieldMergeScope(
     existingBytes: ByteArray,
-    val incomingHlc: HLC,
-    val changedMask: Long,
-    val logger: Logger,
-    val isDelete: Boolean = false,
+    @PublishedApi internal val incomingHlc: HLC,
+    @PublishedApi internal val changedMask: Long,
+    @PublishedApi internal val logger: Logger,
+    @PublishedApi internal val isDelete: Boolean = false,
 ) {
     @PublishedApi
     internal var index = FieldHlcMap(existingBytes)
@@ -79,11 +79,11 @@ class FieldMergeScope(
     /**
      * Explicitly stamps [tagId] with [hlc] in the active merge index.
      */
-    fun updateTag(tagId: Int, hlc: HLC) {
+    internal fun updateTag(tagId: Int, hlc: HLC) {
         index = index.updateTag(tagId, hlc)
     }
 
-    fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean =
+    internal fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean =
         index.hasTagNewerThan(horizon, excludeTag)
 
     /**

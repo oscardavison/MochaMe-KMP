@@ -4,17 +4,9 @@ import app.cash.turbine.test
 import com.mochame.bio.di.BioInfraTestModule
 import com.mochame.bio.di.BioTestEnv
 import com.mochame.bio.domain.DailyContext
-import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_IS_NAPPED
-import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_READINESS_SCORE
-import com.mochame.bio.infrastructure.DailyContextCodecV1.Companion.TAG_SLEEP_HOURS
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runDatabaseEnvironment
 import com.mochame.sync.api.boot.BootState
-import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.common.bitmaskOf
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
 import kotlinx.coroutines.test.TestScope
 import org.koin.plugin.module.dsl.modules
 import kotlin.test.Test
@@ -74,7 +66,7 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun shouldIndexByEpochDayAndLinkToIntent() = runEnv {
+    fun shouldIndexByEpochDayAndSaveRecord() = runEnv {
         val context = getTestContext()
 
         contextRepo.upsertContext(context)
@@ -83,26 +75,10 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         assertNotNull(entity)
         assertEquals(context.id, entity.id)
         assertEquals(false, entity.isDeleted)
-
-        val intents = intentStore.intents
-        assertTrue(intents.isNotEmpty())
-        val intent = intents.last()
-        assertEquals(context.id, intent.candidateKey)
-        assertEquals(MutationOp.UPSERT, intent.operation)
-        assertEquals(
-            intent.changedMask,
-            bitmaskOf(
-                TAG_PRIMARY_KEY,
-                TAG_CREATED_AT,
-                TAG_SLEEP_HOURS,
-                TAG_READINESS_SCORE,
-                TAG_IS_NAPPED
-            )
-        )
     }
 
     @Test
-    fun shouldMergeAndUnsetFieldLevelMutationsWithoutClobbering() = runEnv { // no clobber
+    fun shouldMergeAndUnsetFieldLevelMutationsWithoutClobbering() = runEnv {
         val originalContext = getTestContext()
 
         contextRepo.upsertContext(originalContext)
@@ -126,13 +102,10 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         val context = getTestContext()
         contextRepo.upsertContext(context)
 
-        val initialIntentCount = intentStore.intents.size
-
         val secondResult = contextRepo.upsertContext(context)
 
-        // Assert: Skipped and no extra intent appended
+        // Assert: Skipped
         assertEquals(0L, secondResult)
-        assertEquals(initialIntentCount, intentStore.intents.size)
     }
 
     // -----------------------------------------------------------
@@ -151,10 +124,6 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         val entity = contextDao.getAnyContextById(context.id)
         assertNotNull(entity)
         assertTrue(entity.isDeleted)
-
-        val deletionIntent = intentStore.intents.last()
-        assertEquals(context.id, deletionIntent.candidateKey)
-        assertEquals(MutationOp.DELETE, deletionIntent.operation)
     }
 
     @Test

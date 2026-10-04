@@ -1,6 +1,6 @@
 package com.mochame.sync.infrastructure
 
-import com.mochame.sync.spi.infrastructure.SyncWorkerHook
+import com.mochame.sync.domain.infrastructure.SyncWorkerHook
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

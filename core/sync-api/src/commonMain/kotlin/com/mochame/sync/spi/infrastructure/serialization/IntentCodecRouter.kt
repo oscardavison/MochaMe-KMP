@@ -1,9 +1,0 @@
-package com.mochame.sync.spi.infrastructure.serialization
-
-import com.mochame.sync.spi.infrastructure.VersionRouter
-import com.mochame.sync.spi.models.SyncIntent
-
-interface IntentCodecRouter: VersionRouter<IntentCodec> {
-    fun routedEncode(intent: SyncIntent): ByteArray
-    fun routedDecode(bytes: ByteArray, version: Int): SyncIntent
-}

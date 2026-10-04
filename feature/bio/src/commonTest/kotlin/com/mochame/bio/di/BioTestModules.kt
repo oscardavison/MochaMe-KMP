@@ -4,8 +4,10 @@ import com.mochame.bio.data.BioMicroSchema
 import com.mochame.bio.data.DailyContextDao
 import com.mochame.bio.data.DefaultDailyContextRepository
 import com.mochame.node.fixtures.SpyBootStatusManager
-import com.mochame.sync.fixtures.FakeSyncIntentStore
-import com.mochame.sync.fixtures.di.FixturesSyncModule
+import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.platform.fixtures.di.FixturesPlatformModule
+import com.mochame.support.TestSupportModule
+import com.mochame.sync.fixtures.FakeLocalFirstEngineModule
 import com.mochame.utils.fixtures.MochaFakeTimeUtils
 import com.mochame.utils.fixtures.di.FakeMochaTimeProviderModule
 import org.koin.core.annotation.ComponentScan
@@ -16,8 +18,11 @@ import org.koin.core.annotation.Single
 @Module(
     includes = [
         BioProductionModule::class,
-        FixturesSyncModule::class,
-        FakeMochaTimeProviderModule::class
+        FixturesPlatformModule::class,
+        FixturesNodeModule::class,
+        FakeMochaTimeProviderModule::class,
+        FakeLocalFirstEngineModule::class,
+        TestSupportModule::class,
     ]
 )
 @ComponentScan("com.mochame.bio.di")
@@ -31,6 +36,5 @@ internal class BioTestEnv(
     val contextRepo: DefaultDailyContextRepository,
     val contextDao: DailyContextDao,
     val fakeClock: MochaFakeTimeUtils,
-    val intentStore: FakeSyncIntentStore,
     val bootProvider: SpyBootStatusManager
 )

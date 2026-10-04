@@ -7,11 +7,11 @@ import com.mochame.sync.di.infrastructure.ClientWebSocketTransportTestEnv
 import com.mochame.sync.di.infrastructure.TransportTestModule
 import com.mochame.sync.infrastructure.ClientWebSocketTransport.Companion.FAST_RECONNECT_DELAY
 import com.mochame.sync.infrastructure.ClientWebSocketTransport.Companion.STANDARD_RECONNECT_DELAY
-import com.mochame.sync.spi.network.NetworkConfig
-import com.mochame.sync.spi.network.SendResult
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.WireFrameFactory
-import com.mochame.sync.spi.network.encode
+import com.mochame.sync.api.network.NetworkConfig
+import com.mochame.sync.api.network.SendResult
+import com.mochame.sync.api.network.WireFrame
+import com.mochame.sync.api.network.WireFrameFactory
+import com.mochame.sync.api.network.encode
 import com.mochame.utils.fixtures.TestPayloads
 import io.ktor.http.URLProtocol
 import io.ktor.websocket.CloseReason

@@ -14,16 +14,20 @@ import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.hlc.HLC
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.repository.LocalFirstDependencies
+import com.mochame.sync.api.models.LocalFirstEntity
+import com.mochame.sync.api.repository.LocalFirstEngine
 import com.mochame.sync.common.InternalTestApi
 import com.mochame.sync.common.toBitmask
+import com.mochame.sync.di.SyncInfraModule
 import com.mochame.sync.di.codec.CodecTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.di.infrastructure.DefaultKeyedLockerModule
-import com.mochame.sync.fixtures.FakeBlobStore
-import com.mochame.sync.fixtures.FakeSyncIntentStore
-import com.mochame.sync.fixtures.di.FixturesSyncModule
+import com.mochame.sync.domain.infrastructure.KeyedLocker
 import com.mochame.sync.infrastructure.DefaultKeyedLocker
+import com.mochame.sync.infrastructure.DefaultLocalFirstEngine
+import com.mochame.sync.internal.fixtures.di.FixturesSyncModule
+import com.mochame.sync.internal.fixtures.infrastructure.FakeBlobStore
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.FeatureRepositoryFixture
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook
@@ -33,8 +37,9 @@ import com.mochame.sync.internal.fixtures.serialization.FeatureCodecRouterFixtur
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.KeyedLocker
+import com.mochame.sync.spi.infrastructure.SyncReceiver
 import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.spi.policy.ExecutionPolicy
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.Dispatchers
@@ -43,29 +48,28 @@ import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
+
 /**
  * Test Fixture & Verification:
  *
  * Faked / Test-controlled dependencies:
- * - HlcFactory: Spy implementation around real clock to verify tick counts, causal timestamps, and floor tracking.
- * - TransactionProvider: In-memory passthrough with fault-injection (_shouldThrow) to assert transaction boundaries.
- * - SyncIntentStore: In-memory store (LinkedHashMap) to assert recorded intent payloads, metadata, and status.
- * - SyncWorkerHook: Spy implementation to verify invalidation signals dispatched strictly post-commit.
- * - NodeContextManager & BootStatusProvider: StateFlow-driven fakes to simulate boot states and node state.
- * - FeatureCodecRouterFixture & FakeFeatureCodec: Routes as default to lightweight fake. Decode / Encode pipeline verified
- *   2-byte preset completed roundtrip with parity.
- * - FakeBlobStore (holding FakeDigestState + TestWorkspace): Simulate throwing on each operation, and uses internal maps
- *   as opposed to involving the Test Filesystem
+ * - HlcFactory: Spy
+ * - TransactionProvider: Fake
+ * - SyncIntentStore: Fake
+ * - SyncWorkerHook: Spy
+ * - NodeContextManager & BootStatusProvider: Fakes
+ * - FeatureCodecRouterFixture & FakeFeatureCodec: Routes as default to fake codec
+ * - BlobStore: Fake
  *
  * Integrated Dependencies:
- * - ExecutionPolicy (StaggeredDbRetryPolicy): Validates retry loops on Transient.DatabaseBusy and ensures
- *   repository behavior despite non-atomic retry behaviors. Essential to verify against possibility of partial
- *   state updates within retry increments.
- * - KeyedLocker (DefaultKeyedLocker): Tightly coupled to functioning of repository. Mutex is required as the nested block suspends - faking unnecessary.
+ * - ExecutionPolicy (StaggeredDbRetryPolicy)
+ * - KeyedLocker (DefaultKeyedLocker)
  */
+
 
 @Module(
     includes = [
+        SyncInfraModule::class,
         FixturesSyncModule::class,
         SyncInternalFixturesModule::class,
         DefaultKeyedLockerModule::class,
@@ -76,7 +80,11 @@ import org.koin.core.annotation.Single
         TestLoggerModule::class
     ]
 )
-@ComponentScan("com.mochame.sync.di.api", "com.mochame.sync.internal.fixtures")
+@ComponentScan(
+    "com.mochame.sync.di.api",
+    "com.mochame.sync.internal.fixtures",
+    "com.mochame.sync.engine"
+)
 internal class LocalFirstRepoTestModule {
 
     @Single(binds = [KeyedLocker::class])
@@ -84,30 +92,34 @@ internal class LocalFirstRepoTestModule {
 
     @OptIn(InternalTestApi::class)
     @Single
-    fun provideFeatureRepository(
+    fun <T : LocalFirstEntity<T>> provideFeatureRepository(
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A,
-        deps: LocalFirstDependencies,
+        engine: LocalFirstEngine,
         codecRouter: FeatureCodecRouterFixture,
         logger: Logger,
     ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
-        deps = deps,
+        engine = engine,
         codecRouter = codecRouter,
         logger = logger
     )
+
+    @Single(binds = [SyncReceiver::class])
+    fun provideFixtureRepoReceiver(repo: FeatureRepositoryFixture): SyncReceiver =
+        repo.asSyncReceiver()
 }
 
 @Factory
 @ExperimentalKermitApi
 internal class LocalFirstRepoTestEnv(
     val repo: FeatureRepositoryFixture,
+    val engine: DefaultLocalFirstEngine,
     val hlcFactory: SpyHlcFactory,
     val intentStore: FakeSyncIntentStore,
     val workerHook: SpySyncWorkerHook,
     val nodeManager: FakeNodeContextManager,
     val bootProvider: SpyBootStatusManager,
     val integratedCodec: FeatureCodecV1,
-    val deps: LocalFirstDependencies,
     val blobStore: FakeBlobStore,
     val transactor: FakeTransactionProvider,
     val fakeClock: FakeTimeUtils,
@@ -115,13 +127,14 @@ internal class LocalFirstRepoTestEnv(
     val fakeBufferProvider: BufferProvider,
     val logger: Logger,
     val writer: TestLogWriter,
+    val executor: ExecutionPolicy,
 ) {
     @OptIn(InternalTestApi::class)
     fun createCodecIntegratedRepo(
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A
     ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
-        deps = deps,
+        engine = engine,
         codecRouter = FeatureCodecRouter(integratedCodec, logger),
         logger = logger
     )
@@ -133,7 +146,19 @@ internal class LocalFirstRepoTestEnv(
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A
     ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
-        deps = deps.copy(ioContext = Dispatchers.Default),
+        engine = DefaultLocalFirstEngine(
+            hlcFactory = hlcFactory,
+            transactor = transactor,
+            blobStore = blobStore,
+            intentStore = intentStore,
+            workerHook = workerHook,
+            executor = executor,
+            locker = locker,
+            logger = logger,
+            nodeManager = nodeManager,
+            bootProvider = bootProvider,
+            ioContext = Dispatchers.Default
+        ),
         codecRouter = FeatureCodecRouterFixture(
             integratedCodec,
             FakeFeatureCodec(fakeBufferProvider),
@@ -147,11 +172,11 @@ internal class LocalFirstRepoTestEnv(
         bootProvider.updateState(BootState.Ready)
     }
 
-   fun makeRemoteIntent(
-       new: FeatureEntity,
-       old: FeatureEntity?,
-       hlc: HLC,
-       op: MutationOp
+    fun makeRemoteIntent(
+        new: FeatureEntity,
+        old: FeatureEntity?,
+        hlc: HLC,
+        op: MutationOp
     ): Pair<DecodeContext, ByteArray> {
         val payload = integratedCodec.encode(new, old)
 

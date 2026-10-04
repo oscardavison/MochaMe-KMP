@@ -1,8 +1,8 @@
-package com.mochame.sync.spi
+package com.mochame.sync.spi.infrastructure.serialization
 
 import com.mochame.support.MochaPlatformTest
 import com.mochame.sync.api.hlc.HLC
-import com.mochame.sync.spi.infrastructure.serialization.FieldHlcMap
+import com.mochame.sync.spi.*
 import com.mochame.sync.spi.node.NodeId
 import kotlin.test.Test
 import kotlin.test.assertEquals

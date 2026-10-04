@@ -4,14 +4,14 @@ import co.touchlab.kermit.Logger
 import com.mochame.logger.test.TestLoggerModule
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.api.hlc.HlcFactory
+import com.mochame.sync.domain.infrastructure.SyncWorkerHook
+import com.mochame.sync.domain.stores.QuarantinedPayloadStore
+import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
+import com.mochame.sync.domain.stores.SyncIntentStore
 import com.mochame.sync.internal.fixtures.FakeQuarantinedPayloadStore
-import com.mochame.sync.fixtures.FakeSyncIntentStore
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook
-import com.mochame.sync.spi.domain.QuarantinedPayloadStore
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
-import com.mochame.sync.spi.infrastructure.SyncIntentStore
-import com.mochame.sync.spi.infrastructure.SyncWorkerHook
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.di.FakeTimeProviderModule
 import org.koin.core.annotation.Module
@@ -43,4 +43,5 @@ class SyncInternalFixturesModule {
 
     @Single(binds = [SyncWorkerHook::class])
     fun provideSpySyncWorkerHook(): SpySyncWorkerHook = SpySyncWorkerHook()
+
 }

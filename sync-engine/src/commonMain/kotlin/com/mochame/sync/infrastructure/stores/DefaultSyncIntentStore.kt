@@ -7,11 +7,11 @@ import com.mochame.sync.api.metadata.SyncStatus
 import com.mochame.sync.data.SyncIntentDao
 import com.mochame.sync.data.toDomain
 import com.mochame.sync.data.toEntity
-import com.mochame.sync.spi.domain.SyncIntentMaintenanceStore
-import com.mochame.sync.spi.infrastructure.SyncIntentStore
-import com.mochame.sync.spi.models.ClaimedBatch
+import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
+import com.mochame.sync.domain.stores.SyncIntentStore
+import com.mochame.sync.domain.model.ClaimedBatch
 import com.mochame.sync.spi.models.QuarantinedFeatureSummary
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.model.SyncIntent
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex

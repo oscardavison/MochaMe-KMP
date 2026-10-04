@@ -1,7 +1,7 @@
 package com.mochame.sync.internal.fixtures.infrastructure
 
 import com.mochame.sync.infrastructure.DefaultSyncWorkerHook
-import com.mochame.sync.spi.infrastructure.SyncWorkerHook
+import com.mochame.sync.domain.infrastructure.SyncWorkerHook
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.flow.Flow

@@ -1,9 +1,8 @@
 package com.mochame.sync.spi.infrastructure.serialization
 
 import co.touchlab.kermit.Logger
+import com.mochame.sync.api.hlc.HLC
 import com.mochame.sync.api.models.LocalFirstEntity
-import com.mochame.sync.spi.infrastructure.getCodec
-import com.mochame.sync.spi.infrastructure.latestCodec
 import com.mochame.sync.spi.models.DecodeContext
 
 abstract class BaseFeatureCodecRouter<T : LocalFirstEntity<T>>(
@@ -25,4 +24,14 @@ abstract class BaseFeatureCodecRouter<T : LocalFirstEntity<T>>(
     override fun routedComputeChangedTags(new: T, old: T?): List<Int> =
         latestCodec.computeChangedTags(new, old)
 
+    override fun stampHlcMetadata(
+        candidateState: T,
+        existingState: T?,
+        changedTags: List<Int>,
+        hlc: HLC
+    ): T {
+        var fieldHlcMap = FieldHlcMap(existingState?.fieldHlcs ?: ByteArray(0))
+        changedTags.forEach { tag -> fieldHlcMap = fieldHlcMap.updateTag(tag, hlc) }
+        return candidateState.withHlcMetadata(hlc, fieldHlcMap.bytes)
+    }
 }

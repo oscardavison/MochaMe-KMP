@@ -235,7 +235,8 @@ class FieldMergeScopeTest : MochaPlatformTest() {
         val initialHlc = createHlc(ts = 100L)
         val updatedHlc = createHlc(ts = 400L)
         val existingBytes = FieldHlcMap.EMPTY.updateTag(tagId = 2, hlc = initialHlc).bytes
-        val scope = FieldMergeScope(existingBytes, incomingHlc = initialHlc, changedMask = 0L, logger)
+        val scope =
+            FieldMergeScope(existingBytes, incomingHlc = initialHlc, changedMask = 0L, logger)
 
         // When
         scope.updateTag(tagId = 2, hlc = updatedHlc)

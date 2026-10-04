@@ -5,11 +5,11 @@ import com.mochame.annotations.AppBackgroundScope
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.sync.spi.network.NetworkConfig
-import com.mochame.sync.spi.network.SendResult
-import com.mochame.sync.spi.network.SyncTransport
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.WireFrameFactory
+import com.mochame.sync.api.network.NetworkConfig
+import com.mochame.sync.api.network.SendResult
+import com.mochame.sync.api.network.SyncTransport
+import com.mochame.sync.api.network.WireFrame
+import com.mochame.sync.api.network.WireFrameFactory
 import com.mochame.sync.spi.node.NodeContextManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine

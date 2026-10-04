@@ -5,8 +5,8 @@ import com.mochame.server.utils.FakeWebSocketSession
 import com.mochame.server.utils.ServerConfig
 import com.mochame.server.utils.createWriteIntent
 import com.mochame.server.utils.fakeSession
-import com.mochame.sync.spi.network.WireFrame
-import com.mochame.sync.spi.network.WireFrameFactory
+import com.mochame.sync.api.network.WireFrame
+import com.mochame.sync.api.network.WireFrameFactory
 import com.mochame.utils.fixtures.AutoIncrementFakeTimeUtils
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.core.test.TestScope

@@ -3,9 +3,8 @@ package com.mochame.app.entry.android
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.mochame.annotations.AppMainScope
-import com.mochame.sync.spi.network.SyncTransport
+import com.mochame.sync.api.network.SyncTransport
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Single
 
@@ -16,13 +15,13 @@ class AndroidAppLifecycleObserver(
 ) : DefaultLifecycleObserver {
 
     override fun onStop(owner: LifecycleOwner) {
-        coroutineScope.launch(Dispatchers.Main.immediate) {
+        coroutineScope.launch {
             transport.pause()
         }
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        coroutineScope.launch(Dispatchers.Main.immediate) {
+        coroutineScope.launch {
             transport.resume()
         }
     }

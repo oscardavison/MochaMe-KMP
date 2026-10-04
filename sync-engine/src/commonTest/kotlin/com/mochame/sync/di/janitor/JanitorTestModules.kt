@@ -10,13 +10,12 @@ import com.mochame.node.fixtures.di.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.support.TestSupportModule
-import com.mochame.support.TestTeardownHook
 import com.mochame.sync.di.SyncProductionModule
 import com.mochame.sync.di.domain.SyncPruneIntentsTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.domain.config.JanitorMaintenanceConfig
-import com.mochame.sync.fixtures.FakeSyncIntentStore
 import com.mochame.sync.infrastructure.stores.DefaultBlobStore
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.orchestration.DefaultSyncJanitor
 import com.mochame.utils.fixtures.FakeTimeUtils

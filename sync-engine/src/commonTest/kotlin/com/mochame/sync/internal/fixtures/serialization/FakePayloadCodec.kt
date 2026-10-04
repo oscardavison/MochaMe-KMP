@@ -1,7 +1,7 @@
 package com.mochame.sync.internal.fixtures.serialization
 
-import com.mochame.sync.spi.infrastructure.serialization.PayloadCodec
-import com.mochame.sync.spi.models.SyncIntent
+import com.mochame.sync.domain.serialization.PayloadCodec
+import com.mochame.sync.domain.model.SyncIntent
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 

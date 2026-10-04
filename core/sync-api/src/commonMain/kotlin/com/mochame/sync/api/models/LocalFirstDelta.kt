@@ -1,6 +1,5 @@
 package com.mochame.sync.api.models
 
-import com.mochame.sync.spi.infrastructure.serialization.FieldHlcMap
 import com.mochame.sync.spi.models.DecodeContext
 
 /**
@@ -9,7 +8,7 @@ import com.mochame.sync.spi.models.DecodeContext
  * * [isDeleted]: ProtoNumber 2
  * * [createdAt]: ProtoNumber 3
  *
- * Max Tag Count: 63 ([FieldHlcMap] stores the ProtoNumber as a single [Byte]
+ * Max Tag Count: 63 (Internal sync logic stores the ProtoNumber as a single [Byte]
  * & [DecodeContext.changedMask] stores all possible tag changes in a single [Long]).
  *
  * ```kotlin

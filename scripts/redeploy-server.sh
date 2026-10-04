@@ -5,7 +5,7 @@ set -euo pipefail
 # Configuration & Paths
 # ------------------------------------------------------------------------------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.1.0"
+VERSION="0.1.1"
 DIST_DIR="${PROJECT_ROOT}/dist"
 DIST_ARCHIVE="${DIST_DIR}/server-${VERSION}.tar.gz"
 

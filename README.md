@@ -12,7 +12,9 @@
 
 Needs Updating 
 
-<img width="550" height="720" alt="image" src="https://github.com/user-attachments/assets/827177dc-1a2e-4d1b-8156-facf8df9ebe9" />
+<p align="center">
+  <img width="220" height="288" alt="logo" src="https://github.com/user-attachments/assets/827177dc-1a2e-4d1b-8156-facf8df9ebe9" />
+</p>
 
 </details>
 
