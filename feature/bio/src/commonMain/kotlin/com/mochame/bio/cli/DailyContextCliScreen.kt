@@ -23,7 +23,7 @@ class DailyContextCliScreen(
         get() = "Daily Context (${timeProvider.formatStandardDay(activeEpochDay)})"
 
     override suspend fun renderAndHandleInput(): ScreenResult {
-        val currentEntity = repository.getContext(activeEpochDay)
+        val currentEntity = repository.getActiveContextById(activeEpochDay)
 
         println("Current Stored Values:")
         println("  1. Sleep Hours    : " + (currentEntity?.sleepHours?.let { "$it hrs" }

@@ -16,7 +16,7 @@ class SaveDailyContextUseCase(
         notes: Update<String> = Update.Unchanged,
         isNapped: Update<Boolean> = Update.Unchanged
     ): Result<Unit> = runCatchingCancellable {
-        val existing = repository.getContext(epochDay)
+        val existing = repository.getActiveContextById(epochDay)
 
         val updatedEntity = DailyContext(
             id = epochDay,

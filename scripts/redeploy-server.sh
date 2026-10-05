@@ -30,9 +30,9 @@ if [[ -f "${DIST_ARCHIVE}" ]]; then
     CLEANUP_TEMP=false
 else
     info "No pre-built archive in dist/. Compiling locally..."
-    "${PROJECT_ROOT}/gradlew" :server:installDist
+    "${PROJECT_ROOT}/gradlew" :sync:server:installDist
 
-    SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
+    SERVER_INSTALL_DIR="${PROJECT_ROOT}/sync/server/build/install/server"
 
     if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
         err "Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}"
@@ -58,8 +58,8 @@ if [[ "${CLEANUP_TEMP}" == true ]]; then
     rm -f "${TEMP_ARCHIVE}"
 fi
 
-if [[ -f "${PROJECT_ROOT}/server/Dockerfile" ]]; then
-    scp -i "${SSH_KEY}" "${PROJECT_ROOT}/server/Dockerfile" "${AZURE_HOST}:~/mochame/server/Dockerfile"
+if [[ -f "${PROJECT_ROOT}/sync/server/Dockerfile" ]]; then
+    scp -i "${SSH_KEY}" "${PROJECT_ROOT}/sync/server/Dockerfile" "${AZURE_HOST}:~/mochame/server/Dockerfile"
 fi
 
 # ------------------------------------------------------------------------------
@@ -77,14 +77,14 @@ docker compose down --remove-orphans
 echo "==> Deleting server-side SQLite state and old binaries..."
 rm -rf server-data
 rm -rf ~/.local/share/mochame
-rm -rf server/build/install/server
+rm -rf sync/server/build/install/server
 
 echo "==> Pre-creating server-data as azureuser (UID 1000)..."
 mkdir -p server-data
 
 echo "==> Unpacking new server distribution..."
-mkdir -p server/build/install/server
-tar -xmzf /tmp/server-dist.tar.gz -C server/build/install/server
+mkdir -p sync/server/build/install/server
+tar -xmzf /tmp/server-dist.tar.gz -C sync/server/build/install/server
 rm -f /tmp/server-dist.tar.gz
 
 echo "==> Starting container..."

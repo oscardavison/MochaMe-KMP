@@ -8,7 +8,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":core:sync-api"))
+            api(project(":sync:api"))
             implementation(project(":core:test:fixtures-utils"))
             implementation(libs.koin.core)
             implementation(libs.kotlinx.atomicfu)

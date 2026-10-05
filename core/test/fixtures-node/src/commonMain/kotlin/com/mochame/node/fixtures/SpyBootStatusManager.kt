@@ -3,7 +3,7 @@ package com.mochame.node.fixtures
 import com.mochame.node.managers.DefaultBootStatusManager
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.boot.BootStatusProvider
-import com.mochame.sync.spi.boot.BootStatusUpdater
+import com.mochame.sync.api.boot.BootStatusUpdater
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlin.time.Duration

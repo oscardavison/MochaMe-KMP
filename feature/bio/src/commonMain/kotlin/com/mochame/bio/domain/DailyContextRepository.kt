@@ -6,7 +6,7 @@ interface DailyContextRepository {
 
     fun observeContext(epochDay: Long): Flow<DailyContext?>
     suspend fun upsertContext(context: DailyContext) : Long
-    suspend fun getContext(epochDay: Long): DailyContext?
+    suspend fun getActiveContextById(epochDay: Long): DailyContext?
     suspend fun softDeleteContext(epochDay: Long): Long
     suspend fun hardDeleteContexts(cutoff: Long)
     suspend fun countSoftDeleted(): Int

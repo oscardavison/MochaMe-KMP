@@ -5,7 +5,7 @@ import com.mochame.node.fixtures.FakeExecutionPolicy
 import com.mochame.node.fixtures.FakeIdGenerator
 import com.mochame.node.fixtures.FakeNodeContextManager
 import com.mochame.sync.api.boot.BootStatusProvider
-import com.mochame.sync.spi.boot.BootStatusUpdater
+import com.mochame.sync.api.boot.BootStatusUpdater
 import com.mochame.sync.spi.node.IdGenerator
 import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.policy.ExecutionPolicy

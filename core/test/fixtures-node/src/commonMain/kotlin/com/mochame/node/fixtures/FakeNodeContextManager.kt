@@ -2,7 +2,7 @@ package com.mochame.node.fixtures
 
 import com.mochame.sync.spi.node.NodeContextManager
 import com.mochame.sync.spi.node.NodeContext
-import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.models.HLC
 import com.mochame.sync.spi.node.NodeId
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock

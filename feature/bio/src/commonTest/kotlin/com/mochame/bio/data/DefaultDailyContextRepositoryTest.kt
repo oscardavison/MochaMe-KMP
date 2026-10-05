@@ -121,7 +121,7 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
         assertTrue(deleteResult != 0L)
 
         // Assert
-        val entity = contextDao.getAnyContextById(context.id)
+        val entity = contextDao.getContextById(context.id)
         assertNotNull(entity)
         assertTrue(entity.isDeleted)
     }

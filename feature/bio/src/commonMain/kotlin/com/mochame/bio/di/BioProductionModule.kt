@@ -1,16 +1,33 @@
 package com.mochame.bio.di
 
-import com.mochame.bio.data.DefaultDailyContextRepository
-import com.mochame.sync.spi.infrastructure.SyncReceiver
+import com.mochame.bio.data.DailyContextDao
+import com.mochame.bio.data.toDomain
+import com.mochame.bio.data.toEntity
+import com.mochame.bio.domain.DailyContext
+import com.mochame.bio.infrastructure.DailyContextFeatureCodecResolver
+import com.mochame.sync.api.SyncAdaptor
+import com.mochame.sync.api.SyncAdaptorFactory
+import com.mochame.sync.api.metadata.FeatureContext
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
-@Module
+@Module(includes = [BioSyncModule::class])
 @ComponentScan("com.mochame.bio")
-class BioProductionModule {
+class BioProductionModule
 
-    @Single(binds = [SyncReceiver::class])
-    fun provideDailyContextSyncReceiver(repo: DefaultDailyContextRepository): SyncReceiver =
-        repo.asSyncReceiver()
+@Module
+class BioSyncModule {
+
+    @Single(createdAtStart = true)
+    fun provideDailyContextAdaptor(
+        factory: SyncAdaptorFactory,
+        dao: DailyContextDao,
+        codec: DailyContextFeatureCodecResolver
+    ): SyncAdaptor<DailyContext> = factory(
+        featureContext = FeatureContext.BIO_DAILY_CONTEXT,
+        codec = codec,
+        fetchById = { dao.getContextById(it)?.toDomain() },
+        save = { dao.upsert(it.toEntity()) }
+    )
 }

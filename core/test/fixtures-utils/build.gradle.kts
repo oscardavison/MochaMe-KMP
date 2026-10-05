@@ -9,7 +9,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:utils"))
-            api(project(":core:sync-api"))
+            api(project(":sync:api"))
             implementation(libs.kotlinx.atomicfu)
             implementation(libs.kotlinx.io.core)
             implementation(libs.kotlinx.datetime)

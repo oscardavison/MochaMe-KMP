@@ -2,14 +2,14 @@ package com.mochame.sync.fixtures
 
 import co.touchlab.kermit.Logger
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
 import com.mochame.sync.api.repository.LocalFirstEngine
-import com.mochame.sync.common.toBitmask
+import com.mochame.sync.api.internal.toBitmask
 import com.mochame.sync.spi.infrastructure.serialization.FeatureCodec
-import com.mochame.sync.spi.infrastructure.serialization.FeatureCodecRouter
+import com.mochame.sync.spi.infrastructure.serialization.FeatureCodecResolver
 import com.mochame.sync.spi.models.DecodeContext
 import com.mochame.sync.spi.node.NodeId
 import com.mochame.utils.fixtures.FakeTimeUtils
@@ -23,7 +23,7 @@ import kotlin.math.max
 import kotlin.uuid.Uuid
 
 /**
- * Thread-safe fake implementation of [LocalFirstEngine] for unit testing.
+ * Thread-safe fake implementation of [com.mochame.sync.domain.LocalFirstEngine] for unit testing.
  * Provided to satisfy dependencies but is irrelevant to feature testing.
  *
  * Uses an internal, in-memory HLC state store.
@@ -57,7 +57,7 @@ class FakeLocalFirstEngine<T : LocalFirstEntity<T>>(
 
     override suspend fun <T: LocalFirstEntity<T>> processIntent(
         featureContext: FeatureContext,
-        codec: FeatureCodecRouter<T, FeatureCodec<T>>,
+        codec: FeatureCodecResolver<T, FeatureCodec<T>>,
         candidateKey: Long,
         incomingHlc: HLC?,
         op: MutationOp,
@@ -128,7 +128,7 @@ class FakeLocalFirstEngine<T : LocalFirstEntity<T>>(
 
     override suspend fun <T: LocalFirstEntity<T>> processRemoteIntent(
         featureContext: FeatureContext,
-        codec: FeatureCodecRouter<T, FeatureCodec<T>>,
+        codec: FeatureCodecResolver<T, FeatureCodec<T>>,
         context: DecodeContext,
         payload: ByteArray?,
         fetchAny: suspend (id: Long) -> T?,
@@ -144,7 +144,7 @@ class FakeLocalFirstEngine<T : LocalFirstEntity<T>>(
                 incomingHlc = context.hlc,
                 op = context.op,
                 fetchExistingState = fetchAny,
-                computeChange = { existing -> codec.routedDecode(payload, context, existing) },
+                computeChange = { existing -> codec.versionDecode(payload, context, existing) },
                 persist = save,
                 onSkip = { 0L }
             )

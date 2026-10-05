@@ -9,7 +9,7 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":core:utils"))
             implementation(project(":feature:bio"))
-            implementation(project(":core:sync-api"))
+            implementation(project(":sync:api"))
 
             implementation(libs.kotlinx.datetime)
         }

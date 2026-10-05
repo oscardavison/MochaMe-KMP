@@ -11,9 +11,10 @@ kotlin {
             implementation(libs.kotlinx.atomicfu)
 
             api(project(":core:platform"))
-            implementation(project(":core:sync-api"))
-            implementation(project(":node"))
-            implementation(project(":sync-engine"))
+            implementation(project(":sync:api"))
+            implementation(project(":sync:node"))
+            implementation(project(":sync:engine"))
+
             implementation(project(":core:logger"))
             implementation(project(":core:annotations"))
             implementation(project(":core:utils"))

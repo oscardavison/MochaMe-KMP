@@ -1,7 +1,7 @@
 package com.mochame.bio.data
 
 import com.mochame.bio.domain.DailyContext
-import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.models.HLC
 import kotlin.time.Instant
 
 fun DailyContextEntity.toDomain() = DailyContext(

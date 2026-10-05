@@ -33,17 +33,17 @@ fi
 # ------------------------------------------------------------------------------
 # 1. Locate NetworkConfig & Trap
 # ------------------------------------------------------------------------------
-NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/spi/network/NetworkConfig.kt" | head -n 1)"
+NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/api/network/NetworkConfig.kt" | head -n 1)"
 
 if [[ -z "${NETWORK_CONFIG_FILE}" || ! -f "${NETWORK_CONFIG_FILE}" ]]; then
-    err "Could not locate com/mochame/sync/spi/network/NetworkConfig.kt"
+    err "Could not locate com/mochame/sync/api/network/NetworkConfig.kt"
     exit 1
 fi
 
 apply_debug_vpn_config() {
     info "Applying Local VPN Gateway NetworkConfig (${VPN_GATEWAY}:${DEBUG_PORT})..."
     cat << EOF > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.spi.network
+package com.mochame.sync.api.network
 
 import org.koin.core.annotation.Single
 
@@ -60,7 +60,7 @@ EOF
 apply_remote_config() {
     info "Restoring Remote Production NetworkConfig (relay.mochame.me:443)..."
     cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.spi.network
+package com.mochame.sync.api.network
 
 import org.koin.core.annotation.Single
 
@@ -107,7 +107,7 @@ if [[ -n "${CLI_DEBUG_BIN}" ]]; then
 fi
 
 info "2/4: Compiling Server Distribution..."
-"${PROJECT_ROOT}/gradlew" :server:installDist
+"${PROJECT_ROOT}/gradlew" :sync:server:installDist
 
 info "3/4: Compiling Android Debug APK..."
 "${PROJECT_ROOT}/gradlew" :app:entry:androidApp:assembleDebug

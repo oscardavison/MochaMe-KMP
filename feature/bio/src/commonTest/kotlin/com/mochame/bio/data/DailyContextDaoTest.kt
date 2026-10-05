@@ -59,7 +59,7 @@ class DailyContextDaoTest : MochaPlatformTest() {
         assertEquals(8.5, result.sleepHours)
         assertEquals(TestHlcFactory.create(1001L).toString(), result.hlc)
 
-        val allRecords = getAllContexts()
+        val allRecords = getAllActiveContexts()
         assertEquals(1, allRecords.size)
     }
 
@@ -83,8 +83,8 @@ class DailyContextDaoTest : MochaPlatformTest() {
         upsert(napped)
         upsert(notNapped)
 
-        assertEquals(1, getAllNappedContexts().size)
-        assertEquals(1, getAllNonNappedContexts().size)
+        assertEquals(1, getAllActiveNappedContexts().size)
+        assertEquals(1, getAllActiveNonNappedContexts().size)
     }
 
     @Test
@@ -300,8 +300,8 @@ class DailyContextDaoTest : MochaPlatformTest() {
 
         hardDeletePruning(3000L)
 
-        assertNull(getAnyContextById(1L))
-        assertNotNull(getAnyContextById(2L))
+        assertNull(getContextById(1L))
+        assertNotNull(getContextById(2L))
     }
 
 }

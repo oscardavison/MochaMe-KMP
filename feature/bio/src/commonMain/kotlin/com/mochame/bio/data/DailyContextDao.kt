@@ -41,16 +41,16 @@ interface DailyContextDao {
     suspend fun getActiveContextById(id: Long): DailyContextEntity?
 
     @Query("SELECT * FROM daily_context WHERE id = :id LIMIT 1")
-    suspend fun getAnyContextById(id: Long): DailyContextEntity?
+    suspend fun getContextById(id: Long): DailyContextEntity?
 
     @Query("SELECT * FROM daily_context WHERE isDeleted = 0 ORDER BY id DESC")
-    suspend fun getAllContexts(): List<DailyContextEntity>
+    suspend fun getAllActiveContexts(): List<DailyContextEntity>
 
     @Query("SELECT * FROM daily_context WHERE isNapped = 1 AND isDeleted = 0")
-    suspend fun getAllNappedContexts(): List<DailyContextEntity>
+    suspend fun getAllActiveNappedContexts(): List<DailyContextEntity>
 
     @Query("SELECT * FROM daily_context WHERE isNapped = 0 AND isDeleted = 0")
-    suspend fun getAllNonNappedContexts(): List<DailyContextEntity>
+    suspend fun getAllActiveNonNappedContexts(): List<DailyContextEntity>
 
     // --- UI OBSERVABLES (Filtered) ---
 

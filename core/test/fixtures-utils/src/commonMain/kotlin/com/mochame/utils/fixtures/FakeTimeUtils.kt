@@ -1,6 +1,6 @@
 package com.mochame.utils.fixtures
 
-import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.models.HLC
 import com.mochame.utils.implementations.DefaultMochaTimeUtils
 import com.mochame.utils.implementations.DefaultTimeUtils
 import com.mochame.utils.interfaces.TimeUtils

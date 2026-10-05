@@ -1,6 +1,6 @@
 package com.mochame.bio.domain
 
-import com.mochame.sync.api.hlc.HLC
+import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.models.LocalFirstEntity
 import kotlin.time.Clock
 import kotlin.time.Instant

@@ -4,13 +4,13 @@ import co.touchlab.kermit.Logger
 import com.mochame.bio.domain.DailyContext
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
+import com.mochame.sync.api.FieldResolver
 import com.mochame.sync.api.models.LocalFirstDelta
 import com.mochame.sync.spi.infrastructure.BufferProvider
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
 import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
-import com.mochame.sync.spi.infrastructure.serialization.FieldMergeScope
 import com.mochame.sync.spi.infrastructure.serialization.diff
 import com.mochame.sync.spi.models.DecodeContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -77,19 +77,6 @@ class DailyContextCodecV1(
         notes = new.notes diff old.notes
     )
 
-    override fun FieldMergeScope.mergeDomainDelta(
-        delta: DailyContextDeltaV1,
-        context: DecodeContext,
-        existing: DailyContext?
-    ) = DailyContext(
-        id = context.candidateKey,
-
-        sleepHours = eval(TAG_SLEEP_HOURS, delta.sleepHours, existing?.sleepHours),
-        readinessScore = eval(TAG_READINESS_SCORE, delta.readinessScore, existing?.readinessScore),
-        isNapped = eval(TAG_IS_NAPPED, delta.isNapped, existing?.isNapped),
-        notes = eval(TAG_NOTES, delta.notes, existing?.notes)
-    )
-
     override fun computeDomainChangedTags(new: DailyContext, old: DailyContext?): List<Int> =
         buildList {
             if (new.sleepHours != old?.sleepHours) add(TAG_SLEEP_HOURS)
@@ -97,5 +84,18 @@ class DailyContextCodecV1(
             if (new.isNapped != old?.isNapped) add(TAG_IS_NAPPED)
             if (new.notes != old?.notes) add(TAG_NOTES)
         }
+
+    override fun FieldResolver.mergeDomainDelta(
+        delta: DailyContextDeltaV1,
+        candidateKey: Long,
+        existing: DailyContext?
+    ) = DailyContext(
+        id = candidateKey,
+
+        sleepHours = resolve(TAG_SLEEP_HOURS, delta.sleepHours, existing?.sleepHours),
+        readinessScore = resolve(TAG_READINESS_SCORE, delta.readinessScore, existing?.readinessScore),
+        isNapped = resolve(TAG_IS_NAPPED, delta.isNapped, existing?.isNapped),
+        notes = resolve(TAG_NOTES, delta.notes, existing?.notes)
+    )
 
 }

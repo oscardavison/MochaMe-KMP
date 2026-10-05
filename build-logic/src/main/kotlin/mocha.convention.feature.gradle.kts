@@ -26,9 +26,9 @@ kotlin {
         commonMainProvider.configure {
             dependencies {
                 implementation(project(":core:annotations"))
-                implementation(project(":core:sync-api"))
                 implementation(project(":core:utils"))
                 implementation(project(":core:logger"))
+                implementation(project(":sync:api"))
 
                 implementation(libs.getLibrary("room-runtime"))
             }

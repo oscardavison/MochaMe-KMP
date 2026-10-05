@@ -77,7 +77,7 @@ android {
 dependencies {
     implementation(project(":core:annotations"))
     implementation(project(":app:ui"))
-    implementation(project(":core:sync-api"))
+    implementation(project(":sync:api"))
     implementation(libs.slf4j.nop)
     implementation(libs.androidx.lifecycle.process)
 

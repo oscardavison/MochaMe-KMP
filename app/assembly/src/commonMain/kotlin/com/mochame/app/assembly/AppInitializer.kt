@@ -6,7 +6,7 @@ import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.sync.spi.boot.BootStatusUpdater
+import com.mochame.sync.api.boot.BootStatusUpdater
 import com.mochame.sync.api.network.NetworkConfig
 import com.mochame.sync.api.network.SyncTransport
 import com.mochame.sync.spi.orchestration.SyncCoordinator

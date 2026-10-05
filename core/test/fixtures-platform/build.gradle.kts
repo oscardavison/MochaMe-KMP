@@ -10,7 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:platform"))
-            implementation(project(":core:sync-api"))
+            implementation(project(":sync:api"))
 
             api(libs.kotlinx.io.core)
             implementation(libs.kotlinx.datetime)

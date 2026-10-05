@@ -4,7 +4,7 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="0.1.1"
 DIST_DIR="${PROJECT_ROOT}/dist"
-SERVER_BUILD_DIST="${PROJECT_ROOT}/server/build/distributions"
+SERVER_BUILD_DIST="${PROJECT_ROOT}/sync/server/build/distributions"
 CLI_STAGE="${PROJECT_ROOT}/build/staging/mochame-cli-pkg"
 
 info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
@@ -13,7 +13,7 @@ success() { echo -e "\033[1;32m[SUCCESS]\033[0m $*"; }
 # ------------------------------------------------------------------------------
 # 0. NetworkConfig & Trap
 # ------------------------------------------------------------------------------
-NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/spi/network/NetworkConfig.kt" | head -n 1)"
+NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/api/network/NetworkConfig.kt" | head -n 1)"
 
 if [[ -z "${NETWORK_CONFIG_FILE}" || ! -f "${NETWORK_CONFIG_FILE}" ]]; then
     echo -e "\033[1;31m[ERROR]\033[0m NetworkConfig.kt not found." >&2
@@ -23,7 +23,7 @@ fi
 apply_cli_config() {
     info "Applying Local Loopback NetworkConfig (127.0.0.1:8080)..."
     cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.spi.network
+package com.mochame.sync.api.network
 
 import org.koin.core.annotation.Single
 
@@ -40,7 +40,7 @@ EOF
 apply_remote_config() {
     info "Applying Remote Production NetworkConfig (relay.mochame.me:443)..."
     cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.spi.network
+package com.mochame.sync.api.network
 
 import org.koin.core.annotation.Single
 
@@ -137,9 +137,9 @@ cp "${APK_SRC}" "${DIST_DIR}/mochame-v${VERSION}-release.apk"
 # ------------------------------------------------------------------------------
 info "Packaging Server distribution archives..."
 
-"${PROJECT_ROOT}/gradlew" :server:installDist :server:distZip
+"${PROJECT_ROOT}/gradlew" :sync:server:installDist :sync:server:distZip
 
-SERVER_INSTALL_DIR="${PROJECT_ROOT}/server/build/install/server"
+SERVER_INSTALL_DIR="${PROJECT_ROOT}/sync/server/build/install/server"
 if [[ ! -d "${SERVER_INSTALL_DIR}" || ! -f "${SERVER_INSTALL_DIR}/bin/server" ]]; then
     echo -e "\033[1;31m[ERROR]\033[0m Server install directory or bin/server missing at: ${SERVER_INSTALL_DIR}" >&2
     exit 1

@@ -2,7 +2,7 @@ services:
   sync-server:
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: sync/server/Dockerfile
     container_name: mochame-relay-server
     restart: unless-stopped
     ports:
