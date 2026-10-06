@@ -5,10 +5,12 @@ import com.mochame.sync.api.SyncAdaptor
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
-import com.mochame.sync.domain.crdt.CrdtIntentResolver
+import com.mochame.sync.domain.crdt.CrdtReconciler
 import com.mochame.sync.domain.infrastructure.LocalFirstEngine
-import com.mochame.sync.spi.infrastructure.SyncReceiver
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.domain.infrastructure.SyncReceiver
+import com.mochame.sync.api.codec.CodecResolver
+import com.mochame.sync.api.codec.FeatureCodec
+import com.mochame.sync.domain.model.DecodeContext
 
 /**
  * Adapts feature domain operations to the underlying [LocalFirstEngine].
@@ -19,15 +21,16 @@ import com.mochame.sync.spi.models.DecodeContext
  * @param featureContext Domain namespace of the target feature.
  * @param engine Local-first coordinator managing locking, clock, and persistence transactions.
  * @param resolver Mediates CRDT resolution, domain diffing, and wire delta serialization.
- * @param fetchAny Persistence fetcher for local records.
+ * @param fetchById Persistence fetcher for local records.
  * @param save Persistence writer for updated records.
  * @param logger Diagnostics and event logger.
  */
 internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
     override val featureContext: FeatureContext,
+    private val codec: CodecResolver<T, FeatureCodec<T>>,
     private val engine: LocalFirstEngine,
-    private val resolver: CrdtIntentResolver,
-    private val fetchAny: suspend (id: Long) -> T?,
+    private val resolver: CrdtReconciler,
+    private val fetchById: suspend (id: Long) -> T?,
     private val save: suspend (entity: T) -> Long,
     private val logger: Logger
 ) : SyncAdaptor<T>, SyncReceiver {
@@ -37,10 +40,11 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
         computeChange: suspend (existing: T?) -> T
     ): Long = engine.processLocalIntent(
         featureContext = featureContext,
-        resolver = resolver,
+        codecResolver = codec,
+        reconciler = resolver,
         candidateKey = candidateKey,
         op = MutationOp.UPSERT,
-        fetchExistingState = fetchAny,
+        fetchExistingState = fetchById,
         computeChange = computeChange,
         persist = save,
         onSkip = {
@@ -54,14 +58,12 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
         computeChange: (suspend (existing: T?) -> T)?
     ): Long = engine.processLocalIntent(
         featureContext = featureContext,
-        resolver = resolver,
+        codecResolver = codec,
+        reconciler = resolver,
         candidateKey = candidateKey,
         op = MutationOp.DELETE,
-        fetchExistingState = fetchAny,
-        computeChange = computeChange ?: { existing ->
-            requireNotNull(existing) { "Cannot delete non-existent entity with ID: $candidateKey" }
-            existing.withDeleteState(true)
-        },
+        fetchExistingState = fetchById,
+        computeChange = computeChange ?: { existing -> existing!!.withDeleteState(true) },
         persist = save,
         onSkip = {
             logger.v { "Skipping Delete [Context:$featureContext, ID:$candidateKey]" }
@@ -75,10 +77,11 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
     ) {
         engine.processRemoteIntent(
             featureContext = featureContext,
-            resolver = resolver,
+            codecResolver = codec,
+            reconciler = resolver,
             decodeContext = context,
             payload = payload,
-            fetchExistingState = fetchAny,
+            fetchExistingState = fetchById,
             save = save
         )
     }

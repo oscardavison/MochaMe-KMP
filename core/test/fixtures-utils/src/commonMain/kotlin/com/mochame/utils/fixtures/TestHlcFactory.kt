@@ -1,7 +1,7 @@
 package com.mochame.utils.fixtures
 
 import com.mochame.sync.api.models.HLC
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant

@@ -4,7 +4,7 @@ import co.touchlab.kermit.ExperimentalKermitApi
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.TestLogWriter
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.di.SyncConcurrencyModule
 import com.mochame.sync.di.SyncInfraModule
@@ -14,7 +14,7 @@ import com.mochame.sync.infrastructure.serialization.DefaultPayloadCodec
 import com.mochame.sync.infrastructure.serialization.IntentCodecV1
 import com.mochame.sync.internal.fixtures.serialization.FakeBatchCodec
 import com.mochame.sync.internal.fixtures.serialization.FakeIntentCodec
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecResolverFixture
+import com.mochame.sync.internal.fixtures.serialization.CodecResolverFixture
 import com.mochame.sync.domain.serialization.BatchCodecResolver
 import com.mochame.sync.domain.serialization.IntentCodecResolver
 import com.mochame.utils.fixtures.di.FakeTimeProviderModule
@@ -99,7 +99,7 @@ internal class CodecRouterTestModule
 @ExperimentalKermitApi
 @Factory
 internal class CodecFixtureTestEnv(
-    val featureRouter: FeatureCodecResolverFixture,
+    val featureRouter: CodecResolverFixture,
     val intentRouter: IntentCodecResolver,
     val realIntentCodec: IntentCodecV1,
     val fakeIntentCodec: FakeIntentCodec,

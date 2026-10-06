@@ -3,13 +3,13 @@
 package com.mochame.sync.api
 
 import co.touchlab.kermit.ExperimentalKermitApi
-import com.mochame.node.fixtures.di.FixturesNodeConfig
+import com.mochame.sync.di.node.FixturesNodeConfig
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.di.api.LocalFirstRepoTestEnv
 import com.mochame.sync.di.api.LocalFirstRepoTestModule
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity

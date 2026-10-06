@@ -47,14 +47,11 @@ include(":core:platform")
 
 include(":core:test:support")
 include(":core:test:test-logger")
-include(":core:test:fixtures-node")
 include(":core:test:fixtures-utils")
 include(":core:test:fixtures-platform")
-include(":core:test:fixtures-sync-api")
 
 include(":sync:protocol")
 include(":sync:api")
-include(":sync:node")
 include(":sync:server")
 include(":sync:engine")
 

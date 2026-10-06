@@ -11,8 +11,8 @@ import com.mochame.logger.withTimer
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.exceptions.toMochaException
 import com.mochame.sync.domain.stores.BlobStore
-import com.mochame.sync.spi.infrastructure.DigestFactory
-import com.mochame.sync.spi.infrastructure.digestHex
+import com.mochame.sync.spi.DigestFactory
+import com.mochame.sync.spi.digestHex
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.sync.Mutex

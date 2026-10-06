@@ -6,13 +6,12 @@ import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.FieldResolver
 import com.mochame.sync.api.models.LocalFirstDelta
-import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
-import com.mochame.sync.spi.infrastructure.serialization.diff
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.api.codec.BaseFeatureCodec
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_CREATED_AT
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_IS_DELETED
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
+import com.mochame.sync.api.codec.diff
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
@@ -51,8 +50,7 @@ class DailyContextCodecV1(
 
     override fun buildDeleteDelta(entity: DailyContext) = DailyContextDeltaV1(
         id = entity.id,
-        isDeleted = true,
-        createdAt = entity.createdAt.toEpochMilliseconds()
+        isDeleted = true
     )
 
     override fun buildInsertDelta(entity: DailyContext) = DailyContextDeltaV1(

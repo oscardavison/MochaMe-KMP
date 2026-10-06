@@ -3,7 +3,7 @@ package com.mochame.sync.internal.fixtures
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.data.SyncIntentEntity
 import com.mochame.sync.domain.model.SyncIntent
 import com.mochame.utils.fixtures.TestHlcFactory

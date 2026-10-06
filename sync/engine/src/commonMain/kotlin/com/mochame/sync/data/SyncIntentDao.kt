@@ -4,8 +4,8 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
-import com.mochame.sync.api.metadata.SyncStatus
-import com.mochame.sync.spi.models.QuarantinedFeatureSummary
+import com.mochame.sync.domain.model.SyncStatus
+import com.mochame.sync.domain.model.QuarantinedFeatureSummary
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 

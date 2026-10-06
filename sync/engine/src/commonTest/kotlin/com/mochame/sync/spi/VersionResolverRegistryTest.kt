@@ -11,7 +11,7 @@ import com.mochame.sync.di.codec.CodecFixtureTestEnv
 import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.internal.fixtures.serialization.deriveContext
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodecResolver
+import com.mochame.sync.api.codec.BaseCodecResolver
 import kotlinx.coroutines.test.TestScope
 import org.koin.plugin.module.dsl.modules
 import kotlin.test.Test
@@ -95,7 +95,7 @@ class VersionResolverRegistryTest : MochaPlatformTest() {
 
     @Test
     fun should_throwUnknownProtocolVersion_when_registryHasGappedNullVersion() = runEnv {
-        val gappedRouter = object : BaseFeatureCodecResolver<FeatureEntity>(
+        val gappedRouter = object : BaseCodecResolver<FeatureEntity>(
             latestVersion = 2,
             versionRegistry = arrayOf(null, null, null),
             logger = logger

@@ -10,6 +10,7 @@ import androidx.room.TypeConverters
 @ConstructedBy(SyncMicroSchemaConstructor::class)
 @Database(
     entities = [
+        NodeContextEntity::class,
         SyncIntentEntity::class,
         QuarantinedPayloadEntity::class
     ],
@@ -18,6 +19,7 @@ import androidx.room.TypeConverters
 )
 @TypeConverters(SyncConverters::class)
 internal abstract class SyncMicroSchema : RoomDatabase() {
+    internal abstract fun nodeContextDao(): NodeContextDao
     internal abstract fun syncIntentDao(): SyncIntentDao
     internal abstract fun quarantinedPayloadDao(): QuarantinedPayloadDao
 

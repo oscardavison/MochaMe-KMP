@@ -4,7 +4,7 @@ import co.touchlab.kermit.Logger
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.domain.hlc.HlcFactory
 import com.mochame.sync.domain.hlc.EngineHlcFactory
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import com.mochame.utils.fixtures.FakeTimeUtils
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock

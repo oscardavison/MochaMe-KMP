@@ -3,21 +3,21 @@
 package com.mochame.sync.infrastructure
 
 import co.touchlab.kermit.ExperimentalKermitApi
-import com.mochame.node.fixtures.di.FixturesNodeConfig
+import com.mochame.sync.di.node.FixturesNodeConfig
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
-import com.mochame.sync.api.internal.bitmaskOf
-import com.mochame.sync.api.internal.toBitmask
+import com.mochame.sync.domain.model.SyncStatus
+import com.mochame.sync.utils.bitmaskOf
+import com.mochame.sync.utils.toBitmask
 import com.mochame.sync.di.api.LocalFirstRepoTestEnv
 import com.mochame.sync.di.api.LocalFirstRepoTestModule
 import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.internal.fixtures.serialization.deriveContext
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.domain.model.DecodeContext
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.CompletableDeferred
@@ -28,7 +28,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.io.IOException
 import org.koin.plugin.module.dsl.modules
@@ -520,7 +519,7 @@ class LocalFirstRepositoryTest : MochaPlatformTest() {
             // Device B: Remote delete intent for record only present in local state
             val remoteHlc = TestHlcFactory.createWithOffset((-1).minutes)
             val decodeContext = DecodeContext(
-                candidateKey = candidateKey,
+                primaryKey = candidateKey,
                 hlc = remoteHlc,
                 op = MutationOp.DELETE,
                 featureSchemaVersion = 1,

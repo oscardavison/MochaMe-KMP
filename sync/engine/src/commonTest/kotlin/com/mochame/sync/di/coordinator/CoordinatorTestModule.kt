@@ -2,29 +2,29 @@
 
 package com.mochame.sync.di.coordinator
 
+import com.mochame.annotations.InternalTestApi
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.node.di.StaggeredDbRetryPolicyModule
-import com.mochame.node.fixtures.FakeNodeContextManager
-import com.mochame.node.fixtures.SpyBootStatusManager
-import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.sync.di.StaggeredDbRetryPolicyModule
+import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
+import com.mochame.sync.internal.fixtures.node.SpyBootStatusManager
+import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.api.metadata.SyncStatus
-import com.mochame.sync.common.InternalTestApi
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.di.SyncConcurrencyModule
 import com.mochame.sync.di.SyncOrchestrationModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.internal.fixtures.FakeQuarantinedPayloadStore
 import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncTransport
-import com.mochame.sync.internal.fixtures.api.FakeSyncReceiver
+import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncReceiver
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook
 import com.mochame.sync.internal.fixtures.serialization.FakeIntentCodec
 import com.mochame.sync.internal.fixtures.serialization.FakePayloadCodec
 import com.mochame.sync.orchestration.DefaultSyncCoordinator
-import com.mochame.sync.spi.infrastructure.SyncReceiver
+import com.mochame.sync.domain.infrastructure.SyncReceiver
 import com.mochame.sync.domain.serialization.IntentCodec
 import com.mochame.sync.domain.serialization.PayloadCodec
 import com.mochame.sync.api.network.SyncTransport

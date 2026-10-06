@@ -5,10 +5,10 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.TestLogWriter
 import com.mochame.annotations.InternalTestApi
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.node.di.StaggeredDbRetryPolicyModule
-import com.mochame.node.fixtures.FakeNodeContextManager
-import com.mochame.node.fixtures.SpyBootStatusManager
-import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.sync.di.StaggeredDbRetryPolicyModule
+import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
+import com.mochame.sync.internal.fixtures.node.SpyBootStatusManager
+import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.api.boot.BootState
@@ -17,7 +17,7 @@ import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
 import com.mochame.sync.domain.infrastructure.LocalFirstEngine
-import com.mochame.sync.api.internal.toBitmask
+import com.mochame.sync.utils.toBitmask
 import com.mochame.sync.di.SyncInfraModule
 import com.mochame.sync.di.codec.CodecTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
@@ -32,16 +32,15 @@ import com.mochame.sync.internal.fixtures.infrastructure.FeatureRepositoryFixtur
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
 import com.mochame.sync.internal.fixtures.infrastructure.SpySyncWorkerHook
 import com.mochame.sync.internal.fixtures.serialization.FakeFeatureCodec
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecResolver
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecResolverFixture
+import com.mochame.sync.internal.fixtures.serialization.CodecResolver
+import com.mochame.sync.internal.fixtures.serialization.CodecResolverFixture
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
-import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.models.DecodeContext
-import com.mochame.sync.spi.policy.ExecutionPolicy
+import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.domain.model.DecodeContext
+import com.mochame.sync.domain.policy.ExecutionPolicy
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.TestNodeId
-import kotlinx.coroutines.Dispatchers
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
@@ -94,7 +93,7 @@ internal class LocalFirstRepoTestModule {
     fun <T : LocalFirstEntity<T>> provideFeatureRepository(
         featureContext: FeatureContext = FeatureContext.TEST_STUB_A,
         engine: LocalFirstEngine,
-        codecRouter: FeatureCodecResolverFixture,
+        codecRouter: CodecResolverFixture,
         logger: Logger,
     ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
@@ -130,7 +129,7 @@ internal class LocalFirstRepoTestEnv(
     ): FeatureRepositoryFixture = FeatureRepositoryFixture(
         featureContext = featureContext,
         engine = engine,
-        codecRouter = FeatureCodecResolver(integratedCodec, logger),
+        codecRouter = CodecResolver(integratedCodec, logger),
         logger = logger
     )
 
@@ -152,9 +151,8 @@ internal class LocalFirstRepoTestEnv(
             logger = logger,
             nodeManager = nodeManager,
             bootProvider = bootProvider,
-            ioContext = Dispatchers.Default
         ),
-        codecRouter = FeatureCodecResolverFixture(
+        codecRouter = CodecResolverFixture(
             integratedCodec,
             FakeFeatureCodec(fakeBufferProvider),
             logger
@@ -178,7 +176,7 @@ internal class LocalFirstRepoTestEnv(
         val changedTags = integratedCodec.computeChangedTags(new, old)
 
         val context = DecodeContext(
-            candidateKey = new.id,
+            primaryKey = new.id,
             hlc = hlc,
             op = op,
             featureSchemaVersion = 1,

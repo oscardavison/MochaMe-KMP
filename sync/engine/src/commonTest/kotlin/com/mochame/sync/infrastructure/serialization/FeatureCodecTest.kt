@@ -5,9 +5,9 @@ import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.models.instant
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.metadata.toTagSummary
-import com.mochame.sync.api.internal.bitmaskOf
-import com.mochame.sync.api.internal.toBitmask
-import com.mochame.sync.api.internal.withTag
+import com.mochame.sync.utils.bitmaskOf
+import com.mochame.sync.utils.toBitmask
+import com.mochame.sync.utils.withTag
 import com.mochame.sync.di.codec.CodecTestModule
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
@@ -16,10 +16,10 @@ import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntityDeltaV1
 import com.mochame.sync.internal.fixtures.serialization.assertDecodeParity
 import com.mochame.sync.internal.fixtures.serialization.deriveContext
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
-import com.mochame.sync.spi.infrastructure.serialization.diff
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_CREATED_AT
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_IS_DELETED
+import com.mochame.sync.api.codec.diff
+import com.mochame.sync.domain.model.DecodeContext
 import com.mochame.utils.fixtures.TestHlcFactory
 import kotlinx.coroutines.test.TestScope
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -185,7 +185,7 @@ class FeatureCodecTest : MochaPlatformTest() {
         val existingEntity = decode(
             bytes = encode(new = FeatureEntity(id = 1000L, countValue = 100), old = null),
             context = DecodeContext(
-                candidateKey = 1000L,
+                primaryKey = 1000L,
                 hlc = newerHlc,
                 op = MutationOp.UPSERT,
                 featureSchemaVersion = 1,
@@ -200,7 +200,7 @@ class FeatureCodecTest : MochaPlatformTest() {
             old = existingEntity
         )
         val staleContext = DecodeContext(
-            candidateKey = existingEntity.id,
+            primaryKey = existingEntity.id,
             hlc = olderHlc,
             op = MutationOp.UPSERT,
             featureSchemaVersion = 1,
@@ -422,7 +422,7 @@ class FeatureCodecTest : MochaPlatformTest() {
 
         // When (Device B: Decode)
         val remoteContext = DecodeContext(
-            candidateKey = updatedEntity.id,
+            primaryKey = updatedEntity.id,
             hlc = updatedEntity.hlc,
             op = MutationOp.UPSERT,
             featureSchemaVersion = 1,
@@ -450,7 +450,7 @@ class FeatureCodecTest : MochaPlatformTest() {
     fun should_throwSerializationException_when_decodingCorruptBytes() = runEnv {
         val corruptBytes = byteArrayOf(0x00, 0x80.toByte(), 0xFF.toByte())
         val context = DecodeContext(
-            candidateKey = 1000L,
+            primaryKey = 1000L,
             hlc = TestHlcFactory.create(),
             op = MutationOp.UPSERT,
             featureSchemaVersion = 1,

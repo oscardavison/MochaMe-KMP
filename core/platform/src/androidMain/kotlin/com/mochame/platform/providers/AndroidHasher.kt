@@ -3,7 +3,7 @@ package com.mochame.platform.providers
 import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
-import com.mochame.sync.spi.infrastructure.DigestState
+import com.mochame.sync.spi.DigestState
 import kotlinx.io.Source
 import kotlinx.io.readByteArray
 import org.koin.core.annotation.Single

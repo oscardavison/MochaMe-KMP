@@ -3,7 +3,6 @@ package com.mochame.app.assembly.di
 import com.mochame.annotations.AppBackgroundScope
 import com.mochame.bio.di.BioProductionModule
 import com.mochame.logger.LoggerModule
-import com.mochame.node.di.NodeProductionModule
 import com.mochame.platform.di.PlatformProductionModule
 import com.mochame.platform.providers.AppBackgroundScopeOwner
 import com.mochame.sync.di.SyncProductionModule
@@ -23,7 +22,6 @@ import org.koin.core.qualifier.named
 
         BioProductionModule::class,
 
-        NodeProductionModule::class,
         SyncProductionModule::class
     ]
 )

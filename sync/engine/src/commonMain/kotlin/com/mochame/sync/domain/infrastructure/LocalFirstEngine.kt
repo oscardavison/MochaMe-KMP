@@ -3,8 +3,10 @@ package com.mochame.sync.domain.infrastructure
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
-import com.mochame.sync.domain.crdt.CrdtIntentResolver
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.domain.crdt.CrdtReconciler
+import com.mochame.sync.api.codec.CodecResolver
+import com.mochame.sync.api.codec.FeatureCodec
+import com.mochame.sync.domain.model.DecodeContext
 
 /**
  * Engine contract handling local-first data mutation pipelines, HLC stamping,
@@ -17,7 +19,7 @@ internal interface LocalFirstEngine {
      * HLC timestamp assignment, state persistence, and sync intent logging.
      *
      * @param featureContext Target feature domain context.
-     * @param resolver CRDT mediator handling field diffing, stamping, and wire encoding.
+     * @param reconciler CRDT mediator handling field diffing, stamping, and wire encoding.
      * @param candidateKey Primary identifier key of the entity being mutated.
      * @param op Mutation operation type (UPSERT or DELETE).
      * @param fetchExistingState Lambda fetching current persisted entity state.
@@ -28,7 +30,8 @@ internal interface LocalFirstEngine {
      */
     suspend fun <T : LocalFirstEntity<T>> processLocalIntent(
         featureContext: FeatureContext,
-        resolver: CrdtIntentResolver<T>,
+        codecResolver: CodecResolver<T, FeatureCodec<T>>,
+        reconciler: CrdtReconciler,
         candidateKey: Long,
         op: MutationOp,
         fetchExistingState: suspend (id: Long) -> T?,
@@ -42,7 +45,7 @@ internal interface LocalFirstEngine {
      * and local atomic commit.
      *
      * @param featureContext Target feature domain context.
-     * @param resolver CRDT mediator handling delta deserialization and LWW merge resolution.
+     * @param reconciler CRDT mediator handling delta deserialization and LWW merge resolution.
      * @param decodeContext Remote decode context containing candidate key, HLC, and operation.
      * @param payload Raw binary payload received from remote transport.
      * @param fetchExistingState Lambda fetching current persisted entity state.
@@ -50,7 +53,8 @@ internal interface LocalFirstEngine {
      */
     suspend fun <T : LocalFirstEntity<T>> processRemoteIntent(
         featureContext: FeatureContext,
-        resolver: CrdtIntentResolver<T>,
+        codecResolver: CodecResolver<T, FeatureCodec<T>>,
+        reconciler: CrdtReconciler,
         decodeContext: DecodeContext,
         payload: ByteArray?,
         fetchExistingState: suspend (id: Long) -> T?,

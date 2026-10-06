@@ -10,7 +10,6 @@ kotlin {
         commonMain.dependencies {
             api(project(":app:assembly"))
             implementation(project(":sync:api"))
-            implementation(project(":sync:node"))
             implementation(project(":core:utils"))
             implementation(project(":core:logger"))
 

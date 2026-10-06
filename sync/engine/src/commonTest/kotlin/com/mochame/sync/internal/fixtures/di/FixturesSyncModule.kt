@@ -1,7 +1,7 @@
 package com.mochame.sync.internal.fixtures.di
 
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeDigestFactory
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.support.TestSupportModule

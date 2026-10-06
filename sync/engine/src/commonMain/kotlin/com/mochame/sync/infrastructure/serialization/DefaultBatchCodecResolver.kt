@@ -5,8 +5,8 @@ import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.domain.serialization.BatchCodec
 import com.mochame.sync.domain.serialization.BatchCodecResolver
-import com.mochame.sync.spi.infrastructure.serialization.getCodec
-import com.mochame.sync.spi.infrastructure.serialization.latestCodec
+import com.mochame.sync.api.utils.getCodec
+import com.mochame.sync.api.utils.latestCodec
 import com.mochame.sync.domain.model.SyncIntent
 import org.koin.core.annotation.Single
 

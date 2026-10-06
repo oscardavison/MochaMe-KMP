@@ -3,8 +3,7 @@ package com.mochame.platform.providers
 import androidx.room.RoomDatabase
 import androidx.room.Transactor
 import androidx.room.useWriterConnection
-import com.mochame.sync.spi.infrastructure.TransactionProvider
-import org.koin.core.annotation.Provided
+import com.mochame.sync.spi.TransactionProvider
 
 /**
  * This was initially added to reduce boilerplate and specifically to abstract Room from this

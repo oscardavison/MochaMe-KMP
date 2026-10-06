@@ -1,8 +1,8 @@
 package com.mochame.sync.internal.fixtures.serialization
 
-import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.serialization.FeatureCodec
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.api.codec.FeatureCodec
+import com.mochame.sync.domain.model.DecodeContext
 import org.koin.core.annotation.Single
 
 @Single
@@ -33,7 +33,7 @@ class FakeFeatureCodec(
         }
 
         return MODEL_PRESET.copy(
-            id = context.candidateKey,
+            id = context.primaryKey,
             hlc = context.hlc,
             lastModified = context.hlc.ts
         )

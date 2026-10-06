@@ -5,7 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import kotlin.time.Clock
 
 /**

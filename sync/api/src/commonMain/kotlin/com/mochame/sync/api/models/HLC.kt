@@ -1,7 +1,6 @@
 package com.mochame.sync.api.models
 
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.sync.spi.node.NodeId
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds

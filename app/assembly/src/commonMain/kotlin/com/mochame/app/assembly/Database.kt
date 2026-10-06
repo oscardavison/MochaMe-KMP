@@ -7,8 +7,8 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import com.mochame.bio.data.DailyContextDao
 import com.mochame.bio.data.DailyContextEntity
-import com.mochame.node.data.NodeContextDao
-import com.mochame.node.data.NodeContextEntity
+import com.mochame.sync.data.NodeContextDao
+import com.mochame.sync.data.NodeContextEntity
 import com.mochame.resonance.data.AuthorEntity
 import com.mochame.resonance.data.BookEntity
 import com.mochame.resonance.data.QuoteEntity
@@ -44,7 +44,7 @@ import com.mochame.telemetry.data.TopicEntity
         BookEntity::class,
         QuoteEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(MochaConverters::class, SyncConverters::class)

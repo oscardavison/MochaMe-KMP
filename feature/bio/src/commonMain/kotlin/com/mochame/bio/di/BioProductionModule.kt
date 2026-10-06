@@ -4,7 +4,7 @@ import com.mochame.bio.data.DailyContextDao
 import com.mochame.bio.data.toDomain
 import com.mochame.bio.data.toEntity
 import com.mochame.bio.domain.DailyContext
-import com.mochame.bio.infrastructure.DailyContextFeatureCodecResolver
+import com.mochame.bio.infrastructure.DailyContextCodecResolver
 import com.mochame.sync.api.SyncAdaptor
 import com.mochame.sync.api.SyncAdaptorFactory
 import com.mochame.sync.api.metadata.FeatureContext
@@ -23,7 +23,7 @@ class BioSyncModule {
     fun provideDailyContextAdaptor(
         factory: SyncAdaptorFactory,
         dao: DailyContextDao,
-        codec: DailyContextFeatureCodecResolver
+        codec: DailyContextCodecResolver
     ): SyncAdaptor<DailyContext> = factory(
         featureContext = FeatureContext.BIO_DAILY_CONTEXT,
         codec = codec,

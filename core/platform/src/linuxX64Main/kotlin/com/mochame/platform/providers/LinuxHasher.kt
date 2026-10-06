@@ -11,7 +11,7 @@ import com.mochame.app.infrastructure.native.openssl.EVP_get_digestbyname
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.sync.spi.infrastructure.DigestState
+import com.mochame.sync.spi.DigestState
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.invoke

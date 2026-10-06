@@ -1,7 +1,7 @@
 package com.mochame.sync.di.data
 
-import com.mochame.platform.di.CommonPlatformModule
 import com.mochame.support.TestTargetsProviderModule
+import com.mochame.sync.data.NodeContextDao
 import com.mochame.sync.data.QuarantinedPayloadDao
 import com.mochame.sync.data.SyncIntentDao
 import com.mochame.sync.data.SyncMicroSchema
@@ -17,5 +17,8 @@ internal class SyncPersistenceTestModule {
 
     @Single
     fun provideQuarantinedPayloadDao(db: SyncMicroSchema): QuarantinedPayloadDao = db.quarantinedPayloadDao()
+
+    @Single
+    fun provideNodeContextDao(db: SyncMicroSchema): NodeContextDao = db.nodeContextDao()
 }
 

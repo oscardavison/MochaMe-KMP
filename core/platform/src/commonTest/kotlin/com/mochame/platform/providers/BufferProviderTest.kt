@@ -4,7 +4,7 @@ import com.mochame.logger.test.TestLoggerModule
 import com.mochame.platform.di.PlatformProviderModule
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
-import com.mochame.sync.spi.infrastructure.BufferProvider
+import com.mochame.sync.spi.BufferProvider
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers

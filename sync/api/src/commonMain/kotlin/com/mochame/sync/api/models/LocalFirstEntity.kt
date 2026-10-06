@@ -23,8 +23,10 @@ interface LocalFirstEntity<T : LocalFirstEntity<T>> {
     val createdAt: Instant
     val lastModified: Long
 
+    /** Outbound state metadata. */
     fun withHlcMetadata(hlc: HLC, fieldBlob: ByteArray): T
     fun withDeleteState(isDeleted: Boolean): T
+    /** For inbound state metadata resolution */
     fun withSyncHeader(
         hlc: HLC,
         lastModified: Long,

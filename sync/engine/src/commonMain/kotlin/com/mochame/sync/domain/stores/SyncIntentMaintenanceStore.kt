@@ -1,7 +1,7 @@
 package com.mochame.sync.domain.stores
 
 import com.mochame.sync.api.models.HLC
-import com.mochame.sync.spi.models.QuarantinedFeatureSummary
+import com.mochame.sync.domain.model.QuarantinedFeatureSummary
 import kotlinx.coroutines.flow.Flow
 
 interface SyncIntentMaintenanceStore : SyncIntentStore {

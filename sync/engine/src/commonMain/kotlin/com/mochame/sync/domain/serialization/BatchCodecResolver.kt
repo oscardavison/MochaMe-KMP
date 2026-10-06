@@ -1,6 +1,6 @@
 package com.mochame.sync.domain.serialization
 
-import com.mochame.sync.spi.infrastructure.serialization.VersionResolver
+import com.mochame.sync.api.utils.VersionResolver
 import com.mochame.sync.domain.model.SyncIntent
 
 

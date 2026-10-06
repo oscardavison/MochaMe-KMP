@@ -1,7 +1,7 @@
 package com.mochame.platform.fixtures
 
-import com.mochame.sync.spi.infrastructure.DigestFactory
-import com.mochame.sync.spi.infrastructure.DigestState
+import com.mochame.sync.spi.DigestFactory
+import com.mochame.sync.spi.DigestState
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.io.Source

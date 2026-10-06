@@ -10,6 +10,11 @@ import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
+import com.mochame.logger.LoggerModule
+import com.mochame.sync.domain.policy.ExecutionPolicy
+import com.mochame.sync.domain.policy.StaggeredDbRetryPolicy
+import co.touchlab.kermit.Logger
+
 @Module(
     includes = [
         SyncDataModule::class,
@@ -18,11 +23,19 @@ import org.koin.core.annotation.Single
         SyncStoresModule::class,
         SyncOrchestrationModule::class,
         SyncConcurrencyModule::class,
+        StaggeredDbRetryPolicyModule::class,
         NetworkModule::class
     ]
 )
 @ComponentScan("com.mochame.sync.api.network", "com.mochame.sync.api.repository", "com.mochame.sync.engine")
 class SyncProductionModule
+
+@Module(includes = [LoggerModule::class])
+class StaggeredDbRetryPolicyModule {
+    @Single(binds = [ExecutionPolicy::class])
+    fun provideStaggeredDbPolicyModule(logger: Logger): ExecutionPolicy =
+        StaggeredDbRetryPolicy(logger = logger)
+}
 
 @Module
 class NetworkModule {

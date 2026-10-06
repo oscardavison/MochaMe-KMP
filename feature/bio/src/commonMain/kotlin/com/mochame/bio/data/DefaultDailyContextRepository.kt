@@ -3,7 +3,6 @@ package com.mochame.bio.data
 import com.mochame.bio.domain.DailyContext
 import com.mochame.bio.domain.DailyContextRepository
 import com.mochame.sync.api.SyncAdaptor
-import com.mochame.sync.spi.infrastructure.SyncReceiver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
@@ -14,11 +13,9 @@ import org.koin.core.annotation.Single
  * HLC stamping, and sync integration.
  *
  * @param dailyContextDao Room DAO for bio daily context persistence.
- * @param codecRouter Codec router for bio domain entities.
- * @param logger Kermit logger instance.
- * @param engine Local-first engine handling mutations and sync pipelines.
+ * @param sync Sync adaptor handling local-first mutations.
  */
-@Single([DailyContextRepository::class, SyncReceiver::class])
+@Single(binds = [DailyContextRepository::class])
 class DefaultDailyContextRepository(
     private val dailyContextDao: DailyContextDao,
     private val sync: SyncAdaptor<DailyContext>,

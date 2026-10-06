@@ -1,7 +1,7 @@
 package com.mochame.sync.domain.hlc
 
 import com.mochame.sync.api.models.HLC
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 
 
 interface HlcFactory {

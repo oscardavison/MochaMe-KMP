@@ -5,17 +5,16 @@ package com.mochame.sync.orchestration
 import androidx.sqlite.SQLiteException
 import app.cash.turbine.test
 import co.touchlab.kermit.ExperimentalKermitApi
+import com.mochame.support.MochaPlatformTest
+import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
-import com.mochame.support.MochaPlatformTest
-import com.mochame.utils.fixtures.TestHlcFactory
-import com.mochame.support.runUnitEnvironment
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.api.models.NodeContext
 import com.mochame.sync.di.janitor.JanitorTestEnv
 import com.mochame.sync.di.janitor.SyncJanitorTestModule
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
-import com.mochame.sync.spi.node.NodeContext
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
 import com.mochame.utils.fixtures.TestPayloads
 import kotlinx.coroutines.CancellationException
@@ -265,7 +264,7 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
     fun should_pipeNodeContextToHlcFactory_when_hydrating() = runEnv { scope ->
         // Given
         bootUpdater.updateState(BootState.Init)
-        val nodeId = NodeId.ZERO
+        val nodeId = TestNodeId.A
 
         val seededHlc = TestHlcFactory.create(
             ts = 1740787200000L,

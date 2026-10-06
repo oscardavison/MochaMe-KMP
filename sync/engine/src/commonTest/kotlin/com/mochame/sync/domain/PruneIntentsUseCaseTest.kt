@@ -6,7 +6,7 @@ import co.touchlab.kermit.ExperimentalKermitApi
 import com.mochame.support.MochaPlatformTest
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.support.runUnitEnvironment
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.di.domain.PruneIntentsTestEnv
 import com.mochame.sync.di.domain.SyncPruneIntentsTestModule
 import com.mochame.sync.internal.fixtures.createTestSyncIntent

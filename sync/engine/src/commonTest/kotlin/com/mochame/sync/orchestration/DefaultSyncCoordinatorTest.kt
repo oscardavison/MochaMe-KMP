@@ -11,12 +11,12 @@ import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.common.InternalTestApi
 import com.mochame.sync.di.coordinator.CoordinatorTestModule
 import com.mochame.sync.di.coordinator.SyncCoordinatorTestEnv
-import com.mochame.sync.domain.model.deriveContext
-import com.mochame.sync.internal.fixtures.api.ReceivedIntent
+import com.mochame.sync.utils.deriveContext
+import com.mochame.sync.internal.fixtures.infrastructure.ReceivedIntent
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
 import com.mochame.sync.api.network.SendResult
 import com.mochame.utils.fixtures.TestHlcFactory

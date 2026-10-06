@@ -1,18 +1,17 @@
 package com.mochame.sync.infrastructure
 
 import co.touchlab.kermit.Logger
-import com.mochame.annotations.IoContext
 import com.mochame.logger.withTimer
 import com.mochame.sync.api.boot.BootStatusProvider
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.exceptions.toMochaException
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.models.LocalFirstEntity
-import com.mochame.sync.domain.crdt.CrdtIntentResolver
-import com.mochame.sync.domain.crdt.OutboundCommitPackage
+import com.mochame.sync.domain.crdt.CrdtReconciler
+import com.mochame.sync.domain.crdt.OutboundContext
 import com.mochame.sync.domain.hlc.HlcFactory
 import com.mochame.sync.domain.infrastructure.KeyedLocker
 import com.mochame.sync.domain.infrastructure.LocalFirstEngine
@@ -20,14 +19,15 @@ import com.mochame.sync.domain.infrastructure.SyncWorkerHook
 import com.mochame.sync.domain.model.SyncIntent
 import com.mochame.sync.domain.stores.BlobStore
 import com.mochame.sync.domain.stores.SyncIntentStore
-import com.mochame.sync.spi.infrastructure.TransactionProvider
-import com.mochame.sync.spi.models.DecodeContext
-import com.mochame.sync.spi.node.NodeContextManager
-import com.mochame.sync.spi.policy.ExecutionPolicy
+import com.mochame.sync.spi.TransactionProvider
+import com.mochame.sync.api.codec.CodecResolver
+import com.mochame.sync.api.codec.FeatureCodec
+import com.mochame.sync.domain.model.DecodeContext
+import com.mochame.sync.domain.infrastructure.NodeContextManager
+import com.mochame.sync.domain.policy.ExecutionPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.Buffer
 import org.koin.core.annotation.Single
-import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 import kotlin.time.TimeSource
 
@@ -43,12 +43,12 @@ internal class DefaultLocalFirstEngine(
     private val logger: Logger,
     private val nodeManager: NodeContextManager,
     private val bootProvider: BootStatusProvider,
-    @IoContext private val ioContext: CoroutineContext
 ) : LocalFirstEngine {
 
     override suspend fun <T : LocalFirstEntity<T>> processLocalIntent(
         featureContext: FeatureContext,
-        resolver: CrdtIntentResolver<T>,
+        codecResolver: CodecResolver<T, FeatureCodec<T>>,
+        reconciler: CrdtReconciler,
         candidateKey: Long,
         op: MutationOp,
         fetchExistingState: suspend (id: Long) -> T?,
@@ -68,7 +68,8 @@ internal class DefaultLocalFirstEngine(
                 val candidateState = computeChange(existingState)
                 val hlc = hlcFactory.getNextHlc()
 
-                val commitPackage = resolver.prepareOutbound(
+                val encodeContext = reconciler.prepareOutbound(
+                    codecResolver = codecResolver,
                     candidateState = candidateState,
                     existingState = existingState,
                     hlc = hlc,
@@ -77,11 +78,11 @@ internal class DefaultLocalFirstEngine(
 
                 handleLocalCommit(
                     featureContext = featureContext,
-                    featureSchemaVersion = resolver.schemaVersion,
+                    featureSchemaVersion = codecResolver.latestVersion,
                     candidateKey = candidateKey,
                     op = op,
-                    commitPackage = commitPackage,
-                    persistAction = { persist(commitPackage.stampedState) }
+                    outboundContext = encodeContext,
+                    persistAction = { persist(encodeContext.stampedState) }
                 )
             }
         }
@@ -89,7 +90,8 @@ internal class DefaultLocalFirstEngine(
 
     override suspend fun <T : LocalFirstEntity<T>> processRemoteIntent(
         featureContext: FeatureContext,
-        resolver: CrdtIntentResolver<T>,
+        codecResolver: CodecResolver<T, FeatureCodec<T>>,
+        reconciler: CrdtReconciler,
         decodeContext: DecodeContext,
         payload: ByteArray?,
         fetchExistingState: suspend (id: Long) -> T?,
@@ -97,27 +99,22 @@ internal class DefaultLocalFirstEngine(
     ) {
         if (payload == null) {
             val blobId = decodeContext.overflowBlobId ?: throw MochaException.Transient.StateIssue(
-                "Null payload received without overflowBlobId for key ${decodeContext.candidateKey}"
+                "Null payload received without overflowBlobId for key ${decodeContext.primaryKey}"
             )
-            logger.d { "Handling overflow payload [Key: ${decodeContext.candidateKey}, Blob: $blobId]" }
+            logger.d { "Handling overflow payload [Key: ${decodeContext.primaryKey}, Blob: $blobId]" }
+            // TODO: This road ends here...
             return
         }
 
         bootProvider.awaitReady()
 
-        locker.withLock(featureContext, decodeContext.candidateKey) {
-            val existingState = fetchExistingState(decodeContext.candidateKey)
-            if (shouldRejectRemote(existingState, decodeContext.hlc, decodeContext.candidateKey)) {
-                return@withLock
-            }
+        locker.withLock(featureContext, decodeContext.primaryKey) {
+            val existing = fetchExistingState(decodeContext.primaryKey)
+            existing?.hlc?.let { hlcFactory.assertValid(it, decodeContext.primaryKey) }
 
-            val mergedState = resolver.resolveInbound(
-                payload = payload,
-                context = decodeContext,
-                existingState = existingState
-            )
+            val merged = reconciler.resolveInbound(payload, decodeContext, existing, codecResolver)
 
-            save(mergedState)
+            save(merged)
         }
     }
 
@@ -126,11 +123,11 @@ internal class DefaultLocalFirstEngine(
         featureSchemaVersion: Int,
         candidateKey: Long,
         op: MutationOp,
-        commitPackage: OutboundCommitPackage<T>,
+        outboundContext: OutboundContext<T>,
         persistAction: suspend () -> Long
     ): Long {
-        val payload = commitPackage.payload
-        val hlc = commitPackage.hlc
+        val payload = outboundContext.payload
+        val hlc = outboundContext.hlc
         val tMark = TimeSource.Monotonic.markNow()
 
         var blobId: String? = null
@@ -151,8 +148,8 @@ internal class DefaultLocalFirstEngine(
                     hlc = hlc,
                     payload = if (blobId == null) payload else null,
                     blobId = blobId,
-                    changedMask = commitPackage.changedMask,
-                    diagnosticSummary = commitPackage.diagnosticSummary
+                    changedMask = outboundContext.changedMask,
+                    diagnosticSummary = outboundContext.diagnosticSummary
                 )
                 nodeManager.updateHlcFloor(hlc)
                 localResult
@@ -170,8 +167,11 @@ internal class DefaultLocalFirstEngine(
         } catch (e: Exception) {
             if (blobId != null) {
                 if (!dbCommitted) {
-                    blobStore.abort(blobId)
+                    blobStore.abort(blobId).also {
+                        logger.e { "Intent Failed: Blob Aborted | Key: $candidateKey | Reason: ${e.message}" }
+                    }
                 } else {
+                    logger.w(e) { "Post-Commit IO Failure: Blob $blobId in /pending. Janitor will reconcile [${e.message}]." }
                     if (e is CancellationException) throw e
                     throw MochaException.Transient.BlobResolutionPending(blobId)
                 }
@@ -191,18 +191,11 @@ internal class DefaultLocalFirstEngine(
         }
         if (existing != null) {
             hlcFactory.assertValid(existing.hlc, candidateKey)
-            if (op == MutationOp.DELETE && existing.isDeleted) return true
+            if (op == MutationOp.DELETE && existing.isDeleted) {
+                logger.v { "Local record is already deleted (HLC: ${existing.hlc}) " }
+            }
+            return true
         }
-        return false
-    }
-
-    private fun <T : LocalFirstEntity<T>> shouldRejectRemote(
-        existing: T?,
-        incomingHlc: HLC,
-        candidateKey: Long
-    ): Boolean {
-        if (existing == null) return false
-        hlcFactory.assertValid(existing.hlc, candidateKey)
         return false
     }
 

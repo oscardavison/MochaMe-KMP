@@ -5,7 +5,7 @@ import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.models.HLC
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import com.mochame.utils.interfaces.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex

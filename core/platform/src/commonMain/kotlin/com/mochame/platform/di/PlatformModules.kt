@@ -9,7 +9,7 @@ import com.mochame.annotations.IoContext
 import com.mochame.annotations.MainContext
 import com.mochame.platform.providers.AppBackgroundScopeOwner
 import com.mochame.platform.providers.createPlatformDigest
-import com.mochame.sync.spi.infrastructure.DigestFactory
+import com.mochame.sync.spi.DigestFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO

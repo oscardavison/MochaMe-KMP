@@ -6,14 +6,14 @@ import com.mochame.logger.withTags
 import com.mochame.sync.api.models.LocalFirstDelta
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
 import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_TEXT_VALUE
-import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_CREATED_AT
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
+import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.api.codec.BaseFeatureCodec
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_CREATED_AT
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_IS_DELETED
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
 import com.mochame.sync.spi.infrastructure.serialization.FieldMergeScope
-import com.mochame.sync.spi.infrastructure.serialization.diff
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.api.codec.diff
+import com.mochame.sync.domain.model.DecodeContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
@@ -73,7 +73,7 @@ class FeatureCodecV1(
         context: DecodeContext,
         existing: FeatureEntity?
     ): FeatureEntity = FeatureEntity(
-        id = context.candidateKey,
+        id = context.primaryKey,
 
         textValue = eval(TAG_TEXT_VALUE, delta.textValue, existing?.textValue),
         countValue = eval(TAG_COUNT_VALUE, delta.countValue, existing?.countValue)

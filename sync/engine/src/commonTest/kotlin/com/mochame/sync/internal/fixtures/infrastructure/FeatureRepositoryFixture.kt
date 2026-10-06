@@ -6,14 +6,14 @@ import com.mochame.logger.withTags
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.domain.infrastructure.LocalFirstEngine
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodecResolver
+import com.mochame.sync.api.codec.BaseCodecResolver
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 
 internal class FeatureRepositoryFixture(
     featureContext: FeatureContext,
     engine: LocalFirstEngine,
-    codecRouter: BaseFeatureCodecResolver<FeatureEntity>,
+    codecRouter: BaseCodecResolver<FeatureEntity>,
     logger: Logger
 ) : LocalFirstRepository<FeatureEntity>(
     featureContext = featureContext,

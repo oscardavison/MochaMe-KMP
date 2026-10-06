@@ -9,8 +9,8 @@ import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.boot.BootStatusUpdater
 import com.mochame.sync.api.network.NetworkConfig
 import com.mochame.sync.api.network.SyncTransport
-import com.mochame.sync.spi.orchestration.SyncCoordinator
-import com.mochame.sync.spi.orchestration.SyncJanitor
+import com.mochame.sync.api.coordination.SyncCoordinator
+import com.mochame.sync.api.coordination.SyncJanitor
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName

@@ -1,7 +1,5 @@
 package com.mochame.sync.api.models
 
-import com.mochame.sync.spi.models.DecodeContext
-
 /**
  * Feature Implementations are to assign:
  * * [id]: ProtoNumber 1
@@ -9,7 +7,7 @@ import com.mochame.sync.spi.models.DecodeContext
  * * [createdAt]: ProtoNumber 3
  *
  * Max Tag Count: 63 (Internal sync logic stores the ProtoNumber as a single [Byte]
- * & [DecodeContext.changedMask] stores all possible tag changes in a single [Long]).
+ * & a mask stores all possible tag changes in a single [Long]).
  *
  * ```kotlin
     @ProtoNumber(TAG_PRIMARY_KEY) override val id: Long,

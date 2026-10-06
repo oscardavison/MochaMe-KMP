@@ -1,11 +1,11 @@
 package com.mochame.sync.domain.crdt
 
-import com.mochame.sync.api.internal.readLongAt
-import com.mochame.sync.api.internal.readUShortAt
-import com.mochame.sync.api.internal.writeIntAsShortAt
-import com.mochame.sync.api.internal.writeLongAt
+import com.mochame.sync.utils.readLongAt
+import com.mochame.sync.utils.readUShortAt
+import com.mochame.sync.utils.writeIntAsShortAt
+import com.mochame.sync.utils.writeLongAt
 import com.mochame.sync.api.models.HLC
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import kotlin.jvm.JvmInline
 import kotlin.uuid.Uuid
 
@@ -30,28 +30,54 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
     }
 
     /**
-     * Batch updates multiple tags using a single destination array allocation.
+     * Batch updates multiple tags.
      */
     fun updateTags(tags: List<Int>, hlc: HLC): FieldHlcMap {
         if (tags.isEmpty()) return this
 
-        val indices = tags.map { findTagIndex(it) }
-        val newEntriesCount = indices.count { it == null }
-        val targetSize = bytes.size + (newEntriesCount * RECORD_SIZE)
+        var newEntriesCount = 0
+        val indices = IntArray(tags.size)
 
+        for (i in tags.indices) {
+            val idx = findTagIndex(tags[i])
+            indices[i] = idx ?: -1
+            if (idx == null) newEntriesCount++
+        }
+
+        val targetSize = bytes.size + (newEntriesCount * RECORD_SIZE)
         val target = bytes.copyOf(targetSize)
         var appendOffset = bytes.size
 
-        tags.forEachIndexed { i, tagId ->
+        for (i in tags.indices) {
             val existingIndex = indices[i]
-            val writeIdx = existingIndex ?: appendOffset.also { appendOffset += RECORD_SIZE }
-            writeRecordAt(target, writeIdx, tagId, hlc)
+            val writeIdx = if (existingIndex != -1) existingIndex else appendOffset.also { appendOffset += RECORD_SIZE }
+            writeRecordAt(target, writeIdx, tags[i], hlc)
         }
 
         return FieldHlcMap(target)
     }
 
-    fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap = updateTags(listOf(tagId), hlc)
+    /**
+     * Returns a new [FieldHlcMap] with [tagId] updated in place or appended at [hlc].
+     */
+    fun updateTag(tagId: Int, hlc: HLC): FieldHlcMap {
+        require(tagId in 0..127)
+
+        val index = findTagIndex(tagId)
+        val target = bytes.copyOf(index?.let { bytes.size } ?: (bytes.size + RECORD_SIZE))
+        val writeIdx = index ?: bytes.size
+
+        target[writeIdx] = tagId.toByte()
+        target.writeLongAt(writeIdx + 1, hlc.ts)
+        target.writeIntAsShortAt(writeIdx + 9, hlc.count)
+
+        hlc.nodeId.value.toLongs { msb, lsb ->
+            target.writeLongAt(writeIdx + 11, msb)
+            target.writeLongAt(writeIdx + 19, lsb)
+        }
+
+        return FieldHlcMap(target)
+    }
 
     fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean {
         var i = 0

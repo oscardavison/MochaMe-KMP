@@ -8,9 +8,9 @@ import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.TestWorkspace
 import com.mochame.platform.fixtures.createTestWorkspace
 import com.mochame.support.TestTeardownHook
-import com.mochame.sync.spi.infrastructure.BufferProvider
-import com.mochame.sync.spi.infrastructure.DigestFactory
-import com.mochame.sync.spi.infrastructure.TransactionProvider
+import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.spi.DigestFactory
+import com.mochame.sync.spi.TransactionProvider
 import kotlinx.io.Buffer
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path

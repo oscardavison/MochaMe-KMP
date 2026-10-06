@@ -3,7 +3,7 @@ package com.mochame.sync.data
 import com.mochame.support.MochaPlatformTest
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.support.runDatabaseEnvironment
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.di.data.SyncPersistenceTestModule
 import com.mochame.sync.internal.fixtures.createTestIntentEntity
 import kotlinx.coroutines.test.TestScope

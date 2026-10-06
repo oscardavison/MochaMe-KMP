@@ -5,7 +5,7 @@ import com.mochame.support.MochaPlatformTest
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.support.runDatabaseEnvironment
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.data.SyncMicroSchema
 import com.mochame.sync.data.SyncMicroSchemaConstructor
 import com.mochame.sync.di.infrastructure.SyncIntentStoreTestModule

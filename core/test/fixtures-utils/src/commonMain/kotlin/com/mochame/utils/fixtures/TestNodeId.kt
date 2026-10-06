@@ -1,6 +1,6 @@
 package com.mochame.utils.fixtures
 
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import kotlin.uuid.Uuid
 
 object TestNodeId {

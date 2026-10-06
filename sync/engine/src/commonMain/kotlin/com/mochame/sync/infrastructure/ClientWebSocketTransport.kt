@@ -10,7 +10,7 @@ import com.mochame.sync.api.network.SendResult
 import com.mochame.sync.api.network.SyncTransport
 import com.mochame.sync.protocol.WireFrame
 import com.mochame.sync.protocol.WireFrameFactory
-import com.mochame.sync.spi.node.NodeContextManager
+import com.mochame.sync.domain.infrastructure.NodeContextManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.ResponseException

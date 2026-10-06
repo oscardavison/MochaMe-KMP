@@ -2,11 +2,11 @@ package com.mochame.sync.internal.fixtures.infrastructure
 
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.domain.stores.SyncIntentMaintenanceStore
 import com.mochame.sync.domain.stores.SyncIntentStore
 import com.mochame.sync.domain.model.ClaimedBatch
-import com.mochame.sync.spi.models.QuarantinedFeatureSummary
+import com.mochame.sync.domain.model.QuarantinedFeatureSummary
 import com.mochame.sync.domain.model.SyncIntent
 import com.mochame.utils.fixtures.FakeTimeUtils
 import kotlinx.atomicfu.atomic

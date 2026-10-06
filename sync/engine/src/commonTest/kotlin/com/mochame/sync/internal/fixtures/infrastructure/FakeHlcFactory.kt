@@ -2,7 +2,7 @@ package com.mochame.sync.internal.fixtures.infrastructure
 
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.domain.hlc.HlcFactory
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId

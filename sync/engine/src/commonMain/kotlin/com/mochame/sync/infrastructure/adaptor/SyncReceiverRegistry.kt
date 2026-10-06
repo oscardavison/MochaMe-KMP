@@ -1,7 +1,7 @@
 package com.mochame.sync.infrastructure.adaptor
 
 import com.mochame.sync.api.metadata.FeatureContext
-import com.mochame.sync.spi.infrastructure.SyncReceiver
+import com.mochame.sync.domain.infrastructure.SyncReceiver
 import org.koin.core.annotation.Single
 
 @Single

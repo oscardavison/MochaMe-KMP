@@ -3,7 +3,7 @@ package com.mochame.sync.internal.fixtures.serialization
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.api.models.LocalFirstEntity
-import com.mochame.sync.spi.models.DecodeContext
+import com.mochame.sync.domain.model.DecodeContext
 import com.mochame.utils.fixtures.TestHlcFactory
 import kotlin.test.assertEquals
 import kotlin.time.Instant
@@ -57,7 +57,7 @@ fun FeatureEntity.deriveContext(
     changedMask: Long? = null
 ) = DecodeContext(
     featureSchemaVersion = schemaVersion,
-    candidateKey = id,
+    primaryKey = id,
     hlc = hlc,
     op = op,
     overflowBlobId = overflowBlobId,

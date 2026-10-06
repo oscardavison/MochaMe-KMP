@@ -4,7 +4,7 @@ import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.models.HLC.Companion.APP_RELEASE_TIME
 import com.mochame.sync.api.models.HLC.Companion.MAX_DRIFT
 import com.mochame.sync.api.models.instant
-import com.mochame.sync.spi.node.NodeId
+import com.mochame.sync.api.models.NodeId
 import kotlin.time.Instant
 
 /**

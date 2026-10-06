@@ -7,7 +7,7 @@ import com.mochame.logger.LogTags
 import com.mochame.platform.providers.AppPathsProvider
 import com.mochame.platform.providers.DatabaseLocation
 import com.mochame.platform.providers.JvmBufferProvider
-import com.mochame.sync.spi.infrastructure.BufferProvider
+import com.mochame.sync.spi.BufferProvider
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem

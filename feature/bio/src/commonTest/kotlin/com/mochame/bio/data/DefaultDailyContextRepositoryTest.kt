@@ -6,7 +6,6 @@ import com.mochame.bio.di.BioTestEnv
 import com.mochame.bio.domain.DailyContext
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runDatabaseEnvironment
-import com.mochame.sync.api.boot.BootState
 import kotlinx.coroutines.test.TestScope
 import org.koin.plugin.module.dsl.modules
 import kotlin.test.Test
@@ -17,13 +16,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private inline fun runEnv(
-    readyUp: Boolean = true,
     crossinline block: suspend BioTestEnv.(TestScope) -> Unit
 ) = runDatabaseEnvironment<BioMicroSchema, BioTestEnv>(
     constructor = BioMicroSchemaConstructor,
     koinSetup = { modules(BioInfraTestModule::class) },
     block = { testScope ->
-        if (readyUp) bootProvider.updateState(BootState.Ready)
         block(testScope)
     }
 )

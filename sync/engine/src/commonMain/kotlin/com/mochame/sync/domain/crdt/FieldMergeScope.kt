@@ -2,10 +2,10 @@ package com.mochame.sync.domain.crdt
 
 import co.touchlab.kermit.Logger
 import com.mochame.sync.api.FieldResolver
-import com.mochame.sync.api.internal.hasTag
+import com.mochame.sync.utils.hasTag
 import com.mochame.sync.api.models.HLC
 import com.mochame.sync.api.models.instant
-import com.mochame.sync.spi.infrastructure.serialization.BaseFeatureCodec.Companion.TAG_IS_DELETED
+import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_IS_DELETED
 import kotlin.time.Instant
 
 /**
@@ -22,12 +22,14 @@ internal class FieldMergeScope(
     private val logger: Logger
 ) : FieldResolver {
 
-    private var index = FieldHlcMap(existingBytes)
-    private val lastDeleteHlc = index.getHlc(TAG_IS_DELETED)
+    private var initialIndex = FieldHlcMap(existingBytes)
+    private val lastDeleteHlc = initialIndex.getHlc(TAG_IS_DELETED)
 
+    /** Stash for single allocation, stored via resolve method calls. */
+    private val tagsToUpdate = mutableListOf<Int>()
 
     /**
-     * Evaluates field resolution using Last-Write-Wins:
+     * Evaluates field resolution using Last-Write-Wins, storing tags in [tagsToUpdate]:
      * - Deletion sweep (`isDelete == true`): Nullifies the field and updates its tag to [incomingHlc]
      *   if the local tag HLC is older than or equal to [incomingHlc]. If a local edit occurred strictly
      *   after [incomingHlc], [existing] survives.
@@ -37,29 +39,29 @@ internal class FieldMergeScope(
      *   - If [tagId] is present in [changedMask], accepts [incoming] and updates the tag index if
      *     the local tag HLC is null or [incomingHlc] > local tag HLC. Otherwise, retains [existing].
      */
-    override fun <V> resolve(tagId: Int, incomingVal: V?, existingVal: V?): V? {
+    override fun <V> resolve(tagId: Int, incoming: V?, existing: V?): V? {
         if (isDelete) {
-            val localTagHlc = index.getHlc(tagId)
+            val localTagHlc = initialIndex.getHlc(tagId)
             return if (localTagHlc == null || incomingHlc >= localTagHlc) {
-                index = index.updateTag(tagId, incomingHlc)
+                tagsToUpdate.add(tagId)
                 null
             } else {
-                existingVal
+                existing
             }
         }
 
-        if (!changedMask.hasTag(tagId)) return existingVal
+        if (!changedMask.hasTag(tagId)) return existing
 
         if (lastDeleteHlc != null && incomingHlc <= lastDeleteHlc) {
-            return existingVal
+            return existing
         }
 
-        val localTagHlc = index.getHlc(tagId)
+        val localTagHlc = initialIndex.getHlc(tagId)
         return if (localTagHlc == null || incomingHlc > localTagHlc) {
-            index = index.updateTag(tagId, incomingHlc)
-            incomingVal
+            tagsToUpdate.add(tagId)
+            incoming
         } else {
-            existingVal
+            existing
         }
     }
 
@@ -74,8 +76,9 @@ internal class FieldMergeScope(
             // Explicit delete intent
             deltaIsDeleted == true -> {
                 if (isNewer) {
-                    updateTag(TAG_IS_DELETED, incomingHlc)
-                    val hasSurvivingField = hasTagNewerThan(incomingHlc, TAG_IS_DELETED)
+                    tagsToUpdate.add(TAG_IS_DELETED)
+                    val hasSurvivingField =
+                        initialIndex.hasTagNewerThan(incomingHlc, TAG_IS_DELETED)
                     !hasSurvivingField
                 } else {
                     existingIsDeleted ?: true
@@ -95,7 +98,6 @@ internal class FieldMergeScope(
             // Implicit revival: Incoming upsert arrives against an existing soft delete
             existingIsDeleted == true -> {
                 if (isNewer) {
-                    updateTag(TAG_IS_DELETED, incomingHlc)
                     logger.i { "Restored [key=$candidateKey]: incoming edit (HLC=$incomingHlc) overrides delete (HLC=$lastDeleteHlc)" }
                     false
                 } else {
@@ -107,28 +109,32 @@ internal class FieldMergeScope(
         }
     }
 
+    /**
+     * Resolves entity creation timestamp:
+     * - Retains existing timestamp if already present locally.
+     * - Adopts incoming timestamp on initial insert.
+     * - Uses `minOf(existing, incoming)` if both exist.
+     * - Falls back to [context] HLC timestamp if an out-of-order field delta arrives without an existing record.
+     */
     fun resolveCreatedAt(deltaCreatedAt: Long?, existingCreatedAt: Instant?): Instant = when {
-        existingCreatedAt == null && deltaCreatedAt != null -> {
+        existingCreatedAt == null && deltaCreatedAt != null ->
             Instant.fromEpochMilliseconds(deltaCreatedAt)
-        }
-        existingCreatedAt != null && deltaCreatedAt == null -> {
-            existingCreatedAt
-        }
+
+        existingCreatedAt != null && deltaCreatedAt == null -> existingCreatedAt
+
         existingCreatedAt != null && deltaCreatedAt != null -> {
             minOf(existingCreatedAt, Instant.fromEpochMilliseconds(deltaCreatedAt))
         }
-        else -> incomingHlc.instant
+
+        else -> incomingHlc.instant.also { logger.w { "CreatedAt hit fallback of [HLC=$incomingHlc] - ensure not related to server monotonic ordering." } }
     }
 
     /**
-     * Explicitly stamps [tagId] with [hlc] in the active merge index.
+     * Executes an array allocation and copy against the [initialIndex] for all [tagsToUpdate]
+     * defined in intermediary resolve method calls.
      */
-    internal fun updateTag(tagId: Int, hlc: HLC) {
-        index = index.updateTag(tagId, hlc)
+    fun buildResultBlob(): ByteArray {
+        if (tagsToUpdate.isEmpty()) return initialIndex.bytes
+        return initialIndex.updateTags(tagsToUpdate, incomingHlc).bytes
     }
-
-    internal fun hasTagNewerThan(horizon: HLC, excludeTag: Int): Boolean =
-        index.hasTagNewerThan(horizon, excludeTag)
-
-    fun buildResultBlob(): ByteArray = index.bytes
 }

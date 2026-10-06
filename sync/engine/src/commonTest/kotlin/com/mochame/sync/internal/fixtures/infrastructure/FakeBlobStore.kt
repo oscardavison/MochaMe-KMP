@@ -2,8 +2,7 @@ package com.mochame.sync.internal.fixtures.infrastructure
 
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.domain.stores.BlobStore
-import com.mochame.sync.spi.infrastructure.DigestFactory
-import com.mochame.sync.spi.infrastructure.digestHex
+import com.mochame.sync.spi.DigestFactory
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.io.Buffer

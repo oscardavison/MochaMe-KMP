@@ -11,7 +11,6 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":sync:api"))
             implementation(project(":sync:protocol"))
-            implementation(project(":sync:node"))
             implementation(libs.kotlinx.atomicfu)
             implementation(libs.kotlinx.serialization.protobuf)
             implementation(libs.kotlinx.datetime)
@@ -22,7 +21,6 @@ kotlin {
         }
 
         commonTest.dependencies {
-            implementation(project(":core:test:fixtures-node"))
             implementation(project(":core:test:fixtures-utils"))
             implementation(project(":core:test:fixtures-platform"))
         }

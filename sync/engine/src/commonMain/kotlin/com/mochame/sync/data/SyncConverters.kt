@@ -3,7 +3,7 @@ package com.mochame.sync.data
 import androidx.room.TypeConverter
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.api.metadata.SyncStatus
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.api.models.HLC
 import kotlin.time.Instant
 

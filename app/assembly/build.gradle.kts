@@ -12,7 +12,6 @@ kotlin {
 
             api(project(":core:platform"))
             implementation(project(":sync:api"))
-            implementation(project(":sync:node"))
             implementation(project(":sync:engine"))
 
             implementation(project(":core:logger"))

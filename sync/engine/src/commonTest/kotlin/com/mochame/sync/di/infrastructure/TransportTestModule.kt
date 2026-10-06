@@ -3,8 +3,8 @@ package com.mochame.sync.di.infrastructure
 import co.touchlab.kermit.Logger
 import com.mochame.annotations.AppBackgroundScope
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.node.fixtures.FakeNodeContextManager
-import com.mochame.node.fixtures.di.FixturesNodeModule
+import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
+import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.sync.di.SyncInfraModule
 import com.mochame.sync.infrastructure.ClientWebSocketTransport
 import com.mochame.sync.internal.fixtures.network.FakeWebSocketEngine

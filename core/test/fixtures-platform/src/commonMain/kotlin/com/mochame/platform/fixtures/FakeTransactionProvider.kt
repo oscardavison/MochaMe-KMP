@@ -1,6 +1,6 @@
 package com.mochame.platform.fixtures
 
-import com.mochame.sync.spi.infrastructure.TransactionProvider
+import com.mochame.sync.spi.TransactionProvider
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 

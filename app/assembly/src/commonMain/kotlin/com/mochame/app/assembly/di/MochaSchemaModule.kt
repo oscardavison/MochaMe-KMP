@@ -6,7 +6,7 @@ import com.mochame.annotations.IoContext
 import com.mochame.app.assembly.MochaMeDatabase
 import com.mochame.app.assembly.MochaMeDatabaseConstructor
 import com.mochame.bio.data.DailyContextDao
-import com.mochame.node.data.NodeContextDao
+import com.mochame.sync.data.NodeContextDao
 import com.mochame.platform.di.PlatformContext
 import com.mochame.platform.providers.DatabaseLocation
 import com.mochame.platform.providers.RoomImmediateTransProvider
@@ -14,7 +14,7 @@ import com.mochame.platform.providers.platformBuilder
 import com.mochame.resonance.data.ResonanceDao
 import com.mochame.sync.data.QuarantinedPayloadDao
 import com.mochame.sync.data.SyncIntentDao
-import com.mochame.sync.spi.infrastructure.TransactionProvider
+import com.mochame.sync.spi.TransactionProvider
 import com.mochame.telemetry.data.TelemetryDao
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single

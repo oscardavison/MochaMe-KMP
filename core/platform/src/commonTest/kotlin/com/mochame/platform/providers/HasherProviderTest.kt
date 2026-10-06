@@ -1,11 +1,10 @@
 package com.mochame.platform.providers
 
 import com.mochame.logger.test.TestLoggerModule
-import com.mochame.platform.di.CommonPlatformModule
 import com.mochame.platform.di.PlatformProviderModule
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
-import com.mochame.sync.spi.infrastructure.DigestFactory
+import com.mochame.sync.spi.DigestFactory
 import kotlinx.coroutines.test.TestScope
 import kotlinx.io.Buffer
 import org.koin.plugin.module.dsl.modules
