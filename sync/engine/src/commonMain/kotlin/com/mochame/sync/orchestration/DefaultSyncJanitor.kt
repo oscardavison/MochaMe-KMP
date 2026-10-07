@@ -170,7 +170,9 @@ internal class DefaultSyncJanitor(
      * Compares blobs successfully staged in the file system (but have not shifted to
      * committed) against a local metadata record, to confirm if a crash came after the
      * database commit, meaning a retry is possible.
-     * If there was a crash prior to the database commit,
+     *
+     *  If commit throws a transient error, an intent will ship, so the Janitor must
+     * reconcile the blobId.
      */
     private suspend fun blobReconciliation() {
         val pendingHashes = try {

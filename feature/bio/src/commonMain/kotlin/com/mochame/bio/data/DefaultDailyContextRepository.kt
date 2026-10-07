@@ -13,20 +13,20 @@ import org.koin.core.annotation.Single
  * HLC stamping, and sync integration.
  *
  * @param dailyContextDao Room DAO for bio daily context persistence.
- * @param sync Sync adaptor handling local-first mutations.
+ * @param adaptor Sync adaptor handling local-first mutations.
  */
 @Single(binds = [DailyContextRepository::class])
 class DefaultDailyContextRepository(
     private val dailyContextDao: DailyContextDao,
-    private val sync: SyncAdaptor<DailyContext>,
+    private val adaptor: SyncAdaptor<DailyContext>,
 ) : DailyContextRepository {
 
     override suspend fun upsertContext(context: DailyContext) =
-        sync.upsert(context.id) { existing ->
+        adaptor.upsert(context.id) { existing ->
             compactState(context, existing)
         }
 
-    override suspend fun softDeleteContext(epochDay: Long) = sync.delete(candidateKey = epochDay)
+    override suspend fun softDeleteContext(epochDay: Long) = adaptor.delete(candidateKey = epochDay)
 
     override fun observeContext(epochDay: Long): Flow<DailyContext?> =
         dailyContextDao.observeContext(epochDay).map { it?.toDomain() }
@@ -49,6 +49,5 @@ class DefaultDailyContextRepository(
         isNapped = newState.isNapped,
         notes = newState.notes,
         lastModified = newState.lastModified,
-        isDeleted = newState.isDeleted
     ) ?: newState
 }

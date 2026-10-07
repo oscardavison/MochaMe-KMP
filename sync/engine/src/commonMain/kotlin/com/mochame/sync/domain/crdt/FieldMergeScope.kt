@@ -43,6 +43,7 @@ internal class FieldMergeScope(
         if (isDelete) {
             val localTagHlc = initialIndex.getHlc(tagId)
             return if (localTagHlc == null || incomingHlc >= localTagHlc) {
+                logger.v { "Field deletion accepted. Incoming $incomingHlc >= local $localTagHlc" }
                 tagsToUpdate.add(tagId)
                 null
             } else {
@@ -53,11 +54,13 @@ internal class FieldMergeScope(
         if (!changedMask.hasTag(tagId)) return existing
 
         if (lastDeleteHlc != null && incomingHlc <= lastDeleteHlc) {
+            logger.v { "Rejecting. Local delete horizon [$lastDeleteHlc] >= incoming [$incomingHlc]" }
             return existing
         }
 
         val localTagHlc = initialIndex.getHlc(tagId)
         return if (localTagHlc == null || incomingHlc > localTagHlc) {
+            logger.v { "Accepting value. Incoming $incomingHlc >= local $localTagHlc" }
             tagsToUpdate.add(tagId)
             incoming
         } else {

@@ -4,7 +4,7 @@ import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.di.SyncInfraModule
-import com.mochame.sync.common.InternalTestApi
+import com.mochame.annotations.InternalTestApi
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers

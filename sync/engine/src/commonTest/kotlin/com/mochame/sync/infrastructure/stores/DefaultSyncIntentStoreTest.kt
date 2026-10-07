@@ -77,7 +77,7 @@ internal class DefaultSyncIntentStoreTest : MochaPlatformTest() {
 
         // Verify payload byte consistency
         assertNotNull(retrievedIntent.payload)
-        assertTrue(TestPayloads.DEFAULT.contentEquals(retrievedIntent.payload!!))
+        assertTrue(TestPayloads.DEFAULT.contentEquals(retrievedIntent.payload))
     }
 
     // -----------------------------------------------------------

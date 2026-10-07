@@ -25,8 +25,10 @@ private inline fun runEnv(crossinline block: suspend NodeDaoTestEnv.(TestScope) 
         constructor = SyncMicroSchemaConstructor,
         koinSetup = {
             modules(SyncPersistenceTestModule::class)
+            modules(org.koin.dsl.module {
+                single { NodeDaoTestEnv(get(), get<SyncMicroSchema>().nodeContextDao()) }
+            })
         },
-        factory = { db -> NodeDaoTestEnv(db, db.nodeContextDao()) },
         block = block
     )
 

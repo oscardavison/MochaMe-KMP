@@ -1,8 +1,13 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package com.mochame.sync.internal.fixtures.serialization
 
-import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.api.FieldResolver
 import com.mochame.sync.api.codec.FeatureCodec
-import com.mochame.sync.domain.model.DecodeContext
+import com.mochame.sync.api.models.LocalFirstDelta
+import com.mochame.sync.spi.BufferProvider
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import org.koin.core.annotation.Single
 
 @Single
@@ -15,32 +20,38 @@ class FakeFeatureCodec(
             id = 5L,
             textValue = "DECODED_VIA_V2_FAKE"
         )
+        val DELTA_PRESET = FeatureEntityDeltaV1(
+            id = 5L,
+            textValue = "DECODED_VIA_V2_FAKE"
+        )
 
         const val SUMMARIZE_PRESET = "OP:V2_SUMMARY"
         const val RECONSTRUCT_PRESET = "OP:V2_RECONSTRUCTED"
-
     }
 
     override fun encode(new: FeatureEntity, old: FeatureEntity?): ByteArray = BYTES_PRESET
 
-    override fun decode(
-        bytes: ByteArray,
-        context: DecodeContext,
+    override fun deserializeDelta(bytes: ByteArray): LocalFirstDelta {
+        if (!bytes.contentEquals(BYTES_PRESET)) {
+            throw SerializationException(
+                "FakeFeatureCodec deserializeDelta received unexpected bytes: ${bytes.joinToString()}"
+            )
+        }
+        return DELTA_PRESET
+    }
+
+    override fun mergeDomain(
+        resolver: FieldResolver,
+        delta: LocalFirstDelta,
+        candidateKey: Long,
         existing: FeatureEntity?
     ): FeatureEntity {
-        require(bytes.contentEquals(BYTES_PRESET)) {
-            "FakeFeatureCodec decode received unexpected bytes: ${bytes.toHexString()}"
-        }
-
-        return MODEL_PRESET.copy(
-            id = context.primaryKey,
-            hlc = context.hlc,
-            lastModified = context.hlc.ts
-        )
+        return MODEL_PRESET.copy(id = candidateKey)
     }
 
     override fun reconstructSummary(bytes: ByteArray): String = RECONSTRUCT_PRESET
-    override fun computeChangedTags(new: FeatureEntity, old: FeatureEntity?) = buildList {
+
+    override fun computeChangedTags(new: FeatureEntity, old: FeatureEntity?): List<Int> = buildList {
         val deleteStateChange = new.isDeleted != (old?.isDeleted ?: false)
         if (deleteStateChange) add(2)
 

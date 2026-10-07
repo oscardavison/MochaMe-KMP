@@ -3,28 +3,36 @@ package com.mochame.sync.internal.fixtures.infrastructure
 import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
+import com.mochame.sync.api.codec.CodecResolver
+import com.mochame.sync.api.codec.FeatureCodec
 import com.mochame.sync.api.metadata.FeatureContext
+import com.mochame.sync.domain.crdt.CrdtReconciler
 import com.mochame.sync.domain.infrastructure.LocalFirstEngine
+import com.mochame.sync.domain.model.DecodeContext
+import com.mochame.sync.infrastructure.adaptor.SyncAdaptorBridge
 import com.mochame.sync.internal.fixtures.serialization.FeatureEntity
-import com.mochame.sync.api.codec.BaseCodecResolver
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 
 internal class FeatureRepositoryFixture(
-    featureContext: FeatureContext,
-    engine: LocalFirstEngine,
-    codecRouter: BaseCodecResolver<FeatureEntity>,
+    val featureContext: FeatureContext,
+    val engine: LocalFirstEngine,
+    val codec: CodecResolver<FeatureEntity, FeatureCodec<FeatureEntity>>,
+    val reconciler: CrdtReconciler,
     logger: Logger
-) : LocalFirstRepository<FeatureEntity>(
-    featureContext = featureContext,
-    engine = engine,
-    codec = codecRouter,
-    logger = logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "FeaRep")
 ) {
     private val lock = reentrantLock()
-
-    // --- Test Utils ---
     private val memoryStore = mutableMapOf<Long, FeatureEntity>()
+
+    val bridge = SyncAdaptorBridge(
+        featureContext = featureContext,
+        codec = codec,
+        engine = engine,
+        reconciler = reconciler,
+        fetchById = { fetchById(it) },
+        save = { save(it) },
+        logger = logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "FeaRep")
+    )
 
     val storedEntities: Map<Long, FeatureEntity>
         get() = lock.withLock { memoryStore.toMap() }
@@ -32,25 +40,21 @@ internal class FeatureRepositoryFixture(
     fun seed(entity: FeatureEntity) = lock.withLock { memoryStore[entity.id] = entity }
     fun clear() = lock.withLock { memoryStore.clear() }
 
-    // --- Feature Implementation ---
     suspend fun upsert(
         candidateKey: Long,
         computeChange: suspend (FeatureEntity?) -> FeatureEntity
-    ): Long = syncUpsert(candidateKey = candidateKey) { existing -> computeChange(existing) }
+    ): Long = bridge.upsert(candidateKey, computeChange)
 
-    suspend fun delete(candidateKey: Long): Long = syncDelete(candidateKey)
+    suspend fun delete(candidateKey: Long): Long = bridge.delete(candidateKey)
 
-    override suspend fun fetchById(id: Long): FeatureEntity? =
+    suspend fun processRemoteIntent(context: DecodeContext, payload: ByteArray?) =
+        bridge.processRemoteIntent(context, payload)
+
+    fun fetchById(id: Long): FeatureEntity? =
         lock.withLock { memoryStore[id] }
 
-    override suspend fun save(entity: FeatureEntity): Long = lock.withLock {
+    fun save(entity: FeatureEntity): Long = lock.withLock {
         memoryStore[entity.id] = entity
         entity.id
     }
-
-    override suspend fun compactState(
-        newState: FeatureEntity,
-        existing: FeatureEntity?
-    ): FeatureEntity = newState
-
 }

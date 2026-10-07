@@ -20,11 +20,12 @@ internal value class FieldHlcMap(val bytes: ByteArray) {
 
     init {
         require(bytes.size % RECORD_SIZE == 0) {
-            "ByteArray size (${bytes.size}) must be a multiple of$RECORD_SIZE"
+            "ByteArray size (${bytes.size}) must be a multiple of $RECORD_SIZE"
         }
     }
 
     fun getHlc(tagId: Int): HLC? {
+        require(tagId in 0..127)
         val index = findTagIndex(tagId) ?: return null
         return readHlcAt(index)
     }

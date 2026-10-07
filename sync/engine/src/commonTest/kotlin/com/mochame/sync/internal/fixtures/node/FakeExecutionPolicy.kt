@@ -1,5 +1,6 @@
 package com.mochame.sync.internal.fixtures.node
 
+import com.mochame.sync.api.exceptions.toMochaException
 import com.mochame.sync.domain.policy.ExecutionPolicy
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
@@ -44,7 +45,11 @@ class FakeExecutionPolicy : ExecutionPolicy {
             throw exceptionToThrow
         }
 
-        return block()
+        return try {
+            block()
+        } catch (e: Exception) {
+            throw e.toMochaException(e.message)
+        }
     }
 
     fun reset() = lock.withLock {

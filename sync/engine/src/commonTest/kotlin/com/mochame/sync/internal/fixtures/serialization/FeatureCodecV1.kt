@@ -3,17 +3,16 @@ package com.mochame.sync.internal.fixtures.serialization
 import co.touchlab.kermit.Logger
 import com.mochame.logger.LogTags
 import com.mochame.logger.withTags
-import com.mochame.sync.api.models.LocalFirstDelta
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
-import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_TEXT_VALUE
-import com.mochame.sync.spi.BufferProvider
+import com.mochame.sync.api.FieldResolver
 import com.mochame.sync.api.codec.BaseFeatureCodec
 import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_CREATED_AT
 import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_IS_DELETED
 import com.mochame.sync.api.codec.BaseFeatureCodec.Companion.TAG_PRIMARY_KEY
-import com.mochame.sync.spi.infrastructure.serialization.FieldMergeScope
 import com.mochame.sync.api.codec.diff
-import com.mochame.sync.domain.model.DecodeContext
+import com.mochame.sync.api.models.LocalFirstDelta
+import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_COUNT_VALUE
+import com.mochame.sync.internal.fixtures.serialization.FeatureCodecV1.Companion.TAG_TEXT_VALUE
+import com.mochame.sync.spi.BufferProvider
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
@@ -68,20 +67,18 @@ class FeatureCodecV1(
         countValue = new.countValue diff old.countValue
     )
 
-    override fun FieldMergeScope.mergeDomainDelta(
+    override fun FieldResolver.mergeDomainDelta(
         delta: FeatureEntityDeltaV1,
-        context: DecodeContext,
+        candidateKey: Long,
         existing: FeatureEntity?
     ): FeatureEntity = FeatureEntity(
-        id = context.primaryKey,
-
-        textValue = eval(TAG_TEXT_VALUE, delta.textValue, existing?.textValue),
-        countValue = eval(TAG_COUNT_VALUE, delta.countValue, existing?.countValue)
+        id = candidateKey,
+        textValue = resolve(TAG_TEXT_VALUE, delta.textValue, existing?.textValue),
+        countValue = resolve(TAG_COUNT_VALUE, delta.countValue, existing?.countValue)
     )
 
     override fun computeDomainChangedTags(new: FeatureEntity, old: FeatureEntity?) = buildList {
         if (old == null || new.textValue != old.textValue) add(TAG_TEXT_VALUE)
         if (old == null || new.countValue != old.countValue) add(TAG_COUNT_VALUE)
     }
-
 }

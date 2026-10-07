@@ -187,10 +187,10 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
             hlc = TestHlcFactory.create(ts = 300L)
         )
 
-        val validBytes1 = intentRouter.versionEncode(intent1)
+        val validBytes1 = intentCodecResolver.versionEncode(intent1)
         val garbageBytes =
             byteArrayOf(0xFF.toByte(), 0x00, 0xFE.toByte(), 0x12) // Unparseable bytes
-        val validBytes3 = intentRouter.versionEncode(intent3)
+        val validBytes3 = intentCodecResolver.versionEncode(intent3)
 
         val batchWirePayload = SyncBatchPayloadV1(
             envelopes = listOf(validBytes1, garbageBytes, validBytes3),
@@ -220,7 +220,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
     fun should_preserve_surviving_valid_intent_when_surrounded_by_corrupted_envelopes() = runEnv {
         // Arrange: [Corrupt, Valid, Corrupt]
         val validIntent = createTestSyncIntent(candidateKey = 5L)
-        val validBytes = intentRouter.versionEncode(validIntent)
+        val validBytes = intentCodecResolver.versionEncode(validIntent)
 
         val garbageBytes1 = byteArrayOf(0x00, 0x01)
         val garbageBytes2 = byteArrayOf(0xDE.toByte(), 0xAD.toByte())
@@ -278,7 +278,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
         runEnv {
             // Arrange: Valid intent bytes, but payload header specifies intentSchemaVersion = 99
             val validIntents = List(3) { createTestSyncIntent() }
-            val validBytes = validIntents.map { intentRouter.versionEncode(it) }
+            val validBytes = validIntents.map { intentCodecResolver.versionEncode(it) }
 
             val batchWirePayload = SyncBatchPayloadV1(
                 envelopes = validBytes,
@@ -318,7 +318,7 @@ internal class BatchCodecV1Test : MochaPlatformTest() {
         )
 
         assertEquals(
-            intentRouter.latestVersion,
+            intentCodecResolver.latestVersion,
             rawBatchPayload.intentSchemaVersion,
             "SyncBatchPayloadV1 header must stamp latestVersion from IntentCodecRouter"
         )

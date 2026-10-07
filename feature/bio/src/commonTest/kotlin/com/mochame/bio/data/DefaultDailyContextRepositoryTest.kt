@@ -46,13 +46,15 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     // -----------------------------------------------------------
 
     @Test
-    fun shouldPersistAndRoundtripLosslessTelemetry() = runEnv {
-        // August 27, 2026 (00:00:00 UTC)
+    fun should_persistAndRoundtripLosslessTelemetry_when_upsertingContext() = runEnv {
+        // Given
         val context = getTestContext()
-        val rowId = contextRepo.upsertContext(context)
-        // 4am rule
-        assertEquals(context.id, rowId)
 
+        // When
+        val rowId = contextRepo.upsertContext(context)
+
+        // Then
+        assertEquals(context.id, rowId)
         val fetched = contextDao.getActiveContextById(rowId)
         assertNotNull(fetched)
         assertEquals(context.id, fetched.id)
@@ -63,11 +65,14 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun shouldIndexByEpochDayAndSaveRecord() = runEnv {
+    fun should_indexByEpochDayAndSaveRecord_when_upsertingContext() = runEnv {
+        // Given
         val context = getTestContext()
 
+        // When
         contextRepo.upsertContext(context)
 
+        // Then
         val entity = contextDao.getActiveContextById(context.id)
         assertNotNull(entity)
         assertEquals(context.id, entity.id)
@@ -75,17 +80,18 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun shouldMergeAndUnsetFieldLevelMutationsWithoutClobbering() = runEnv {
+    fun should_mergeAndUnsetFieldLevelMutationsWithoutClobbering_when_fieldsAreUpdated() = runEnv {
+        // Given
         val originalContext = getTestContext()
-
         contextRepo.upsertContext(originalContext)
-
         val initialEntity = contextDao.getActiveContextById(originalContext.id)
         assertNotNull(initialEntity)
         val initialCreatedAt = initialEntity.createdAt
 
+        // When
         contextRepo.upsertContext(originalContext.copy(sleepHours = null, readinessScore = 75))
 
+        // Then
         val updatedFetched = contextDao.getActiveContextById(originalContext.id)
         assertNotNull(updatedFetched)
         assertEquals(null, updatedFetched.sleepHours)
@@ -95,13 +101,15 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     }
 
     @Test
-    fun shouldSuppressRedundantWrites_on_noopDelta() = runEnv {
+    fun should_suppressRedundantWrites_on_noopDelta() = runEnv {
+        // Given
         val context = getTestContext()
         contextRepo.upsertContext(context)
 
+        // When
         val secondResult = contextRepo.upsertContext(context)
 
-        // Assert: Skipped
+        // Then
         assertEquals(0L, secondResult)
     }
 
@@ -110,23 +118,25 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
     // -----------------------------------------------------------
 
     @Test
-    fun shouldSetIsDeleted_on_softDeletionFlow() = runEnv {
+    fun should_setIsDeleted_on_softDeletionFlow() = runEnv {
+        // Given
         val context = getTestContext()
-
         contextRepo.upsertContext(context)
-        val deleteResult = contextRepo.softDeleteContext(context.id)
-        assertTrue(deleteResult != 0L)
 
-        // Assert
+        // When
+        val deleteResult = contextRepo.softDeleteContext(context.id)
+
+        // Then
+        assertTrue(deleteResult != 0L)
         val entity = contextDao.getContextById(context.id)
         assertNotNull(entity)
         assertTrue(entity.isDeleted)
     }
 
     @Test
-    fun shouldOmitDeletedRecords_on_uiInvalidationOnDelete() = runEnv {
+    fun should_omitDeletedRecords_on_uiInvalidationOnDelete() = runEnv {
+        // Given
         val context = getTestContext()
-
         contextRepo.upsertContext(context)
 
         contextRepo.observeContext(context.id).test {
@@ -134,11 +144,12 @@ class DefaultDailyContextRepositoryTest : MochaPlatformTest() {
             assertNotNull(initial)
             assertFalse(initial.isDeleted)
 
+            // When
             contextRepo.softDeleteContext(context.id)
 
+            // Then
             val deletedEmission = awaitItem()
             assertNull(deletedEmission)
         }
     }
-
 }

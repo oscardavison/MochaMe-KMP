@@ -10,15 +10,15 @@ import org.koin.core.annotation.Single
 class CodecResolverFixture(
     val v1: FeatureCodecV1,
     val v2: FakeFeatureCodec,
-    logger: Logger
+    val testLogger: Logger
 ) : BaseCodecResolver<FeatureEntity>(
     versionRegistry = arrayOf(null, v1, v2),
     latestVersion = 2,
-    logger = logger.withTags(LogTags.Layer.SERI, LogTags.Domain.SYNC, "TeCRtr")
+    logger = testLogger.withTags(LogTags.Layer.SERI, LogTags.Domain.SYNC, "TeCRtr")
 )
 
 @Single
-class CodecResolver(
+class IntegratedResolver(
     val v1: FeatureCodecV1,
     logger: Logger
 ) : BaseCodecResolver<FeatureEntity>(
@@ -26,4 +26,3 @@ class CodecResolver(
     latestVersion = 1,
     logger = logger.withTags(LogTags.Layer.SERI, LogTags.Domain.SYNC, "TeCRtr")
 )
-

@@ -222,7 +222,7 @@ class FakeSyncIntentStore(private val fakeClock: FakeTimeUtils) :
             .filter {
                 it.batchId != null &&
                         it.syncStatus == SyncStatus.SYNCING &&
-                        it.leasedAt != null && it.leasedAt!! <= cutOff &&
+                        it.leasedAt != null && it.leasedAt <= cutOff &&
                         (it.retryCount + increment) < retryThreshold
             }
             .forEach { intent ->
@@ -250,7 +250,7 @@ class FakeSyncIntentStore(private val fakeClock: FakeTimeUtils) :
                 .filter {
                     it.batchId != null &&
                             it.syncStatus == SyncStatus.SYNCING &&
-                            it.leasedAt != null && it.leasedAt!! < cutOff &&
+                            it.leasedAt != null && it.leasedAt < cutOff &&
                             (it.retryCount + 1) >= retryThreshold
                 }
                 .forEach { intent ->

@@ -201,11 +201,11 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
                 finalState is BootState.TransientFailure,
                 "Janitor should have failed on timeout. Got $finalState.."
             )
-            assertTrue(finalState.cause is MochaException.Transient.BootTimeout)
+            assertTrue(finalState.cause is MochaException.Transient.Contention)
         }
 
     @Test
-    fun should_setCriticalBootFailure_when_janitorsOwnLockIsBusy() =
+    fun should_setTransientBootFailure_when_janitorsOwnLockIsBusy() =
         runEnv { scope ->
             // Given
             janitorMutex.lock()
@@ -218,14 +218,14 @@ class DefaultSyncJanitorTest : MochaPlatformTest() {
                 assertEquals(BootState.Idle, awaitItem())
                 expectNoEvents()
 
-                scope.advanceTimeBy(5001L.milliseconds)
+                scope.advanceTimeBy(config.startupTimeout - 1.seconds)
                 expectNoEvents() // -- should not have hit internal timeout
 
-                scope.advanceTimeBy(15_001L.milliseconds)
+                scope.advanceTimeBy(1.seconds)
                 val failureState = awaitItem()
 
-                assertTrue(failureState is BootState.TransientFailure)
-                assertTrue(failureState.cause is MochaException.Transient.BootTimeout)
+                assertTrue(failureState is BootState.TransientFailure, "Boot state")
+                assertTrue(failureState.cause is MochaException.Transient.Contention, "Cause")
             }
 
             janitorMutex.unlock()

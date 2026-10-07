@@ -35,8 +35,8 @@ internal class IntentCodecRouterTest : MochaPlatformTest() {
         val intent = createTestSyncIntent()
 
         // Act
-        val bytes = intentRouter.versionEncode(intent)
-        val decoded = intentRouter.versionDecode(bytes, version = intentRouter.latestVersion)
+        val bytes = intentCodecResolver.versionEncode(intent)
+        val decoded = intentCodecResolver.versionDecode(bytes, version = intentCodecResolver.latestVersion)
 
         // Assert
         assertDecodedIntentParity(intent, decoded)

@@ -3,20 +3,16 @@
 package com.mochame.sync.domain.policy
 
 import co.touchlab.kermit.ExperimentalKermitApi
-import co.touchlab.kermit.Logger
-import co.touchlab.kermit.TestLogWriter
-import com.mochame.logger.test.TestLoggerModule
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runUnitEnvironment
 import com.mochame.sync.api.exceptions.MochaException
+import com.mochame.sync.di.domain.StaggeredDbPolicyTestEnv
+import com.mochame.sync.di.domain.StaggeredDbPolicyTestModule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import org.koin.core.annotation.Factory
-import org.koin.core.annotation.Module
-import org.koin.core.annotation.Single
 import org.koin.plugin.module.dsl.modules
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -26,30 +22,6 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-object TestStaggerConfig {
-    const val MAX_ATTEMPTS: Int = 3
-    val INITIAL_DELAY: Duration = 1.milliseconds
-}
-
-@Module(includes = [TestLoggerModule::class])
-class StaggeredDbPolicyTestModule {
-    @Single
-    fun provideTestStaggeredDbRetryPolicy(logger: Logger): StaggeredDbRetryPolicy =
-        StaggeredDbRetryPolicy(
-            logger,
-            TestStaggerConfig.MAX_ATTEMPTS,
-            TestStaggerConfig.INITIAL_DELAY
-        )
-}
-
-@Factory
-class StaggeredDbPolicyTestEnv(
-    val executor: StaggeredDbRetryPolicy,
-    val writer: TestLogWriter,
-    val logger: Logger,
-    val failureBoundary: Int = TestStaggerConfig.MAX_ATTEMPTS - 1
-)
-
 // -----------------------------------------------------------
 // SUT ENVIRONMENT
 // -----------------------------------------------------------
@@ -58,6 +30,11 @@ private inline fun runEnv(crossinline block: suspend StaggeredDbPolicyTestEnv.(T
         koinSetup = { modules(StaggeredDbPolicyTestModule::class) },
         block = block
     )
+
+object TestStaggerConfig {
+    const val MAX_ATTEMPTS: Int = 3
+    val INITIAL_DELAY: Duration = 1.milliseconds
+}
 
 class StaggeredDbRetryPolicyTest : MochaPlatformTest() {
 

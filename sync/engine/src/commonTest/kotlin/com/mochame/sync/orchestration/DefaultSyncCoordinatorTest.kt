@@ -12,13 +12,13 @@ import com.mochame.sync.api.boot.BootState
 import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
-import com.mochame.sync.domain.model.SyncStatus
+import com.mochame.sync.api.network.SendResult
 import com.mochame.sync.di.coordinator.CoordinatorTestModule
 import com.mochame.sync.di.coordinator.SyncCoordinatorTestEnv
-import com.mochame.sync.utils.deriveContext
-import com.mochame.sync.internal.fixtures.infrastructure.ReceivedIntent
+import com.mochame.sync.domain.model.SyncStatus
 import com.mochame.sync.internal.fixtures.createTestSyncIntent
-import com.mochame.sync.api.network.SendResult
+import com.mochame.sync.internal.fixtures.infrastructure.ReceivedIntent
+import com.mochame.sync.utils.deriveContext
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.CompletableDeferred
@@ -53,19 +53,50 @@ import kotlin.time.Duration.Companion.seconds
 
 private inline fun runEnv(
     bindTestScope: Boolean = true,
-    crossinline koinSetup: KoinApplication.() -> Unit = {},
+    crossinline overrideSetup: KoinApplication.() -> Unit = {},
     crossinline block: suspend SyncCoordinatorTestEnv.(TestScope) -> Unit
 ) = runUnitEnvironment<SyncCoordinatorTestEnv>(
     bindTestScope = bindTestScope,
     koinSetup = {
         modules(CoordinatorTestModule::class)
-        koinSetup()
+        overrideSetup()
     },
     block = block
 )
 
 @ExperimentalCoroutinesApi
 class DefaultSyncCoordinatorTest : MochaPlatformTest() {
+
+    // -------------------------------------------------------------------------
+    // Initialization & Production Receiver Validation
+    // -------------------------------------------------------------------------
+
+//  This does work as intended I just cant capture the instance creation error without it breaking my build
+//    @Test
+//    fun should_throwInternalException_when_productionSyncReceiversAreMissingOnInit() = runEnv(
+//        overrideSetup = {
+//            modules(
+//                module {
+//                    single<SyncReceiverRegistry> { SyncReceiverRegistry() }
+//                }
+//            )
+//        }
+//    ) {
+//        // Given: SyncReceiverRegistry provided without production sync receivers
+//
+//        // When / Then
+//        assertFailsWith<MochaException.Persistent.Internal> {
+//            coordinator
+//        }
+//    }
+
+    @Test
+    fun should_initializeSuccessfully_when_allProductionSyncReceiversAreRegistered() = runEnv {
+        // Given: CoordinatorTestModule provides SyncReceiverRegistry with all production receivers
+
+        // When / Then
+        assertNotNull(coordinator)
+    }
 
     // -------------------------------------------------------------------------
     // Boot Readiness
@@ -807,10 +838,10 @@ class DefaultSyncCoordinatorTest : MochaPlatformTest() {
     // -------------------------------------------------------------------------
 
     @Test
-    fun concurrentInboundAndOutbound_withTransientDbBusy_recoversAndPersistsCorrectly() =
+    fun should_recoverAndPersistCorrectly_on_concurrentInboundAndOutboundWithTransientDbBusy() =
         runEnv(
             bindTestScope = false,
-            koinSetup = {
+            overrideSetup = {
                 modules(
                     module {
                         single<CoroutineContext>(qualifier = named<IoContext>()) {

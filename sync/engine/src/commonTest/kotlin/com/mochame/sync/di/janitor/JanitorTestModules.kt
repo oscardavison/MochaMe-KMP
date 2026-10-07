@@ -3,20 +3,22 @@ package com.mochame.sync.di.janitor
 import co.touchlab.kermit.ExperimentalKermitApi
 import co.touchlab.kermit.TestLogWriter
 import com.mochame.annotations.JanitorMutex
-import com.mochame.sync.internal.fixtures.node.FakeExecutionPolicy
-import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
-import com.mochame.sync.internal.fixtures.node.SpyBootStatusManager
-import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.support.TestSupportModule
-import com.mochame.sync.di.SyncProductionModule
+import com.mochame.sync.di.SyncConcurrencyModule
+import com.mochame.sync.di.SyncDomainModule
+import com.mochame.sync.di.SyncOrchestrationModule
+import com.mochame.sync.di.SyncStoresModule
 import com.mochame.sync.di.domain.SyncPruneIntentsTestModule
 import com.mochame.sync.di.fixtures.SyncInternalFixturesModule
 import com.mochame.sync.domain.config.JanitorMaintenanceConfig
 import com.mochame.sync.infrastructure.stores.DefaultBlobStore
 import com.mochame.sync.internal.fixtures.infrastructure.FakeSyncIntentStore
 import com.mochame.sync.internal.fixtures.infrastructure.SpyHlcFactory
+import com.mochame.sync.internal.fixtures.node.FakeExecutionPolicy
+import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
+import com.mochame.sync.internal.fixtures.node.SpyBootStatusManager
 import com.mochame.sync.orchestration.DefaultSyncJanitor
 import com.mochame.utils.fixtures.FakeTimeUtils
 import com.mochame.utils.fixtures.di.FakeTimeProviderModule
@@ -24,29 +26,22 @@ import kotlinx.coroutines.sync.Mutex
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
-import org.koin.core.annotation.Single
-import kotlin.time.Duration.Companion.milliseconds
 
 @Module(
     includes = [
         TestSupportModule::class,
-        FixturesNodeModule::class,
         FixturesPlatformModule::class,
-        SyncProductionModule::class,
+        SyncStoresModule::class,
+        SyncConcurrencyModule::class,
         SyncPruneIntentsTestModule::class,
+        SyncDomainModule::class,
+        SyncOrchestrationModule::class,
         SyncInternalFixturesModule::class,
         FakeTimeProviderModule::class
     ]
 )
 @ComponentScan("com.mochame.sync.di.janitor")
-internal class SyncJanitorTestModule {
-    @Single
-    internal fun provideTestJanitorConfig(): JanitorMaintenanceConfig = JanitorMaintenanceConfig(
-        maintenanceInterval = 5.milliseconds,
-        startupTimeout = 5.milliseconds,
-        retryThreshold = 5
-    )
-}
+internal class SyncJanitorTestModule
 
 @Factory
 @ExperimentalKermitApi

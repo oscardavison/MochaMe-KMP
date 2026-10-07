@@ -77,23 +77,6 @@ internal class DefaultSyncCoordinator(
     private val logger =
         logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "MsCord")
 
-    private val coordinatorJob = SupervisorJob(appBackgroundScope.coroutineContext[Job])
-
-    private val coordinatorScope = CoroutineScope(
-        appBackgroundScope.coroutineContext + coordinatorJob + CoroutineName("SyncCoordinator")
-    )
-
-    private val backgroundDispatcher = coordinatorScope.coroutineContext[ContinuationInterceptor]
-        ?: error("Dispatcher retrieval error")
-
-    private val SyncIntent.receiver: SyncReceiver
-        get() = receiverRegistry.receivers[featureContext] ?: run {
-            logger.e { "Routing failure for feature context '$featureContext'" }
-            throw MochaException.Transient.StateIssue(
-                "No SyncReceiver for feature context '$featureContext'"
-            )
-        }
-
     init {
         val registered = receiverRegistry.receivers.keys
         val requiredContexts = FeatureContext.entries.filter { it.isProductionEntity }.toSet()
@@ -105,6 +88,20 @@ internal class DefaultSyncCoordinator(
             throw MochaException.Persistent.Internal(errorMsg)
         }
     }
+
+    private val coordinatorJob = SupervisorJob(appBackgroundScope.coroutineContext[Job])
+    private val coordinatorScope = CoroutineScope(
+        appBackgroundScope.coroutineContext + coordinatorJob + CoroutineName("SyncCoordinator")
+    )
+    private val backgroundDispatcher = coordinatorScope.coroutineContext[ContinuationInterceptor]
+        ?: error("Dispatcher retrieval error")
+
+
+    private val SyncIntent.receiver: SyncReceiver
+        get() = receiverRegistry.receivers[featureContext] ?: run {
+            logger.e { "Routing failure for feature context '$featureContext'" }
+            throw MochaException.Transient.StateIssue("No SyncReceiver for feature context '$featureContext'")
+        }
 
     @Volatile
     private var inFlightBatch: InFlightBatch? = null

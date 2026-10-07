@@ -34,8 +34,8 @@ class BatchCodecRouterTest : MochaPlatformTest() {
         val intents = listOf(createTestSyncIntent())
 
         // Act
-        val bytes = batchRouter.versionEncode(intents)
-        val decoded = batchRouter.versionDecode(bytes, version = batchRouter.latestVersion)
+        val bytes = batchCodecResolver.versionEncode(intents)
+        val decoded = batchCodecResolver.versionDecode(bytes, version = batchCodecResolver.latestVersion)
 
         // Assert
         assertEquals(1, decoded.size)

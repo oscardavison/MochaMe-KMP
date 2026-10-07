@@ -10,7 +10,11 @@ import com.mochame.sync.api.codec.CodecResolver
  */
 interface SyncAdaptor<T : LocalFirstEntity<T>> {
     suspend fun upsert(candidateKey: Long, computeChange: suspend (existing: T?) -> T): Long
-    /** Defaults computeChange to call [LocalFirstEntity.withDeleteState] as true. */
+    /**
+     * Defaults computeChange to call [LocalFirstEntity.withDeleteState] passing true.
+     * Intended behavior is for features to nullify their domain fields if isDeleted,
+     * else copy their state and set isDeleted.
+     */
     suspend fun delete(candidateKey: Long, computeChange: (suspend (existing: T?) -> T)? = null): Long
 }
 

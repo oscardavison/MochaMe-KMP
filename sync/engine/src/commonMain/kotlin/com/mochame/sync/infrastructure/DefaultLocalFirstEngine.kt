@@ -110,6 +110,10 @@ internal class DefaultLocalFirstEngine(
 
         locker.withLock(featureContext, decodeContext.primaryKey) {
             val existing = fetchExistingState(decodeContext.primaryKey)
+            if (existing == null && decodeContext.op == MutationOp.DELETE) {
+                logger.v { "Skipping operation [ID:${decodeContext.primaryKey}] -> Non-existent local record (remote HLC: ${decodeContext.hlc})" }
+                return@withLock
+            }
             existing?.hlc?.let { hlcFactory.assertValid(it, decodeContext.primaryKey) }
 
             val merged = reconciler.resolveInbound(payload, decodeContext, existing, codecResolver)
@@ -193,8 +197,8 @@ internal class DefaultLocalFirstEngine(
             hlcFactory.assertValid(existing.hlc, candidateKey)
             if (op == MutationOp.DELETE && existing.isDeleted) {
                 logger.v { "Local record is already deleted (HLC: ${existing.hlc}) " }
+                return true
             }
-            return true
         }
         return false
     }

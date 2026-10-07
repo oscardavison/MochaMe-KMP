@@ -28,7 +28,7 @@ internal class DefaultSyncAdaptorFactory(
         val bridge = SyncAdaptorBridge(
             featureContext = featureContext,
             codec = codec,
-            resolver = resolver,
+            reconciler = resolver,
             engine = engine,
             fetchById = fetchById,
             save = save,

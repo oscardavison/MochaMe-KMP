@@ -20,7 +20,7 @@ import com.mochame.sync.domain.model.DecodeContext
  *
  * @param featureContext Domain namespace of the target feature.
  * @param engine Local-first coordinator managing locking, clock, and persistence transactions.
- * @param resolver Mediates CRDT resolution, domain diffing, and wire delta serialization.
+ * @param reconciler Mediates CRDT resolution, domain diffing, and wire delta serialization.
  * @param fetchById Persistence fetcher for local records.
  * @param save Persistence writer for updated records.
  * @param logger Diagnostics and event logger.
@@ -29,7 +29,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
     override val featureContext: FeatureContext,
     private val codec: CodecResolver<T, FeatureCodec<T>>,
     private val engine: LocalFirstEngine,
-    private val resolver: CrdtReconciler,
+    private val reconciler: CrdtReconciler,
     private val fetchById: suspend (id: Long) -> T?,
     private val save: suspend (entity: T) -> Long,
     private val logger: Logger
@@ -41,7 +41,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
     ): Long = engine.processLocalIntent(
         featureContext = featureContext,
         codecResolver = codec,
-        reconciler = resolver,
+        reconciler = reconciler,
         candidateKey = candidateKey,
         op = MutationOp.UPSERT,
         fetchExistingState = fetchById,
@@ -59,7 +59,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
     ): Long = engine.processLocalIntent(
         featureContext = featureContext,
         codecResolver = codec,
-        reconciler = resolver,
+        reconciler = reconciler,
         candidateKey = candidateKey,
         op = MutationOp.DELETE,
         fetchExistingState = fetchById,
@@ -78,7 +78,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
         engine.processRemoteIntent(
             featureContext = featureContext,
             codecResolver = codec,
-            reconciler = resolver,
+            reconciler = reconciler,
             decodeContext = context,
             payload = payload,
             fetchExistingState = fetchById,

@@ -1,4 +1,4 @@
-package com.mochame.sync.api
+package com.mochame.sync.utils
 
 import com.mochame.support.MochaPlatformTest
 import kotlin.test.Test
@@ -13,14 +13,14 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_writeBytesInExplicitBigEndianOrder_when_writingLong() {
-        // Given: Asymmetric 64-bit value
+        // Given
         val bytes = ByteArray(8)
         val value = 0x0102030405060708L
 
         // When
         bytes.writeLongAt(offset = 0, value = value)
 
-        // Then: MSB first
+        // Then
         bytes.assertBytesAt(
             offset = 0,
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
@@ -28,7 +28,8 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
     }
 
     @Test
-    fun should_roundTripLongBoundariesWithoutLoss_when_writingAndReading() {
+    fun should_roundTripLongBoundariesWithoutLoss_when_writingAndReadingLong() {
+        // Given
         val boundaryValues = listOf(
             0L,
             -1L,
@@ -37,41 +38,36 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
             0x8080808080808080UL.toLong(),      // Repetitive 0x80 byte pattern
             0x0123456789ABCDEFL
         )
-
         val bytes = ByteArray(8)
 
+        // When & Then
         for (value in boundaryValues) {
             bytes.writeLongAt(offset = 0, value = value)
             val actual = bytes.readLongAt(offset = 0)
 
-            assertEquals(
-                expected = value,
-                actual = actual,
-                message = "Failed to round-trip Long: $value (0x${value.toString(16)})"
-            )
+            assertEquals(value, actual)
         }
     }
 
     @Test
     fun should_differentiateSignedAndUnsignedLongReads_when_topBitIsSet() {
-        // Given: 0xFFFFFFFFFFFFFFFF (Signed = -1L, Unsigned = ULong.MAX_VALUE)
+        // Given
         val bytes = ByteArray(8)
+
+        // When
         bytes.writeLongAt(offset = 0, value = -1L)
-
-        // Then 1: Memory inspection
-        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF)
-
-        // Then 2: Signed vs Unsigned contrast
         val signedActual: Long = bytes.readLongAt(offset = 0)
         val unsignedActual: ULong = bytes.readULong(offset = 0)
 
-        assertEquals(-1L, signedActual, "readLongAt must evaluate 0xFF..FF as signed -1L")
-        assertEquals(ULong.MAX_VALUE, unsignedActual, "readULong must evaluate 0xFF..FF as ULong.MAX_VALUE")
+        // Then
+        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF)
+        assertEquals(-1L, signedActual)
+        assertEquals(ULong.MAX_VALUE, unsignedActual)
     }
 
     @Test
     fun should_preserveInterleavedHighAndLowBits_when_roundTrippingLongAtOffset() {
-        // Given: Interleaved negative/positive byte sequence at unaligned offset
+        // Given
         val uLongValue = 0x8001FE028003FF04uL
         val offset = 3
         val bytes = ByteArray(16)
@@ -96,62 +92,58 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_writeBytesInExplicitBigEndianOrder_when_writingInt() {
-        // Given: Asymmetric 32-bit value
+        // Given
         val bytes = ByteArray(4)
         val value = 0x12345678
 
         // When
         bytes.writeIntAt(offset = 0, value = value)
 
-        // Then: MSB first
+        // Then
         bytes.assertBytesAt(offset = 0, 0x12, 0x34, 0x56, 0x78)
     }
 
     @Test
-    fun should_roundTripIntBoundariesWithoutLoss_when_writingAndReading() {
+    fun should_roundTripIntBoundariesWithoutLoss_when_writingAndReadingInt() {
+        // Given
         val boundaryValues = listOf(
             0,
             -1,
-            Int.MAX_VALUE,              // 0x7FFFFFFF
-            Int.MIN_VALUE,              // 0x80000000
-            0x80808080.toInt(),         // Repetitive 0x80 byte pattern
+            Int.MAX_VALUE,
+            Int.MIN_VALUE,
+            0x80808080.toInt(),
             0x12345678
         )
-
         val bytes = ByteArray(4)
 
+        // When & Then
         for (value in boundaryValues) {
             bytes.writeIntAt(offset = 0, value = value)
             val actual = bytes.readIntAt(offset = 0)
 
-            assertEquals(
-                expected = value,
-                actual = actual,
-                message = "Failed to round-trip Int: $value (0x${value.toString(16)})"
-            )
+            assertEquals(value, actual)
         }
     }
 
     @Test
     fun should_differentiateSignedAndUnsignedIntReads_when_topBitIsSet() {
-        // Given: 0xFFFFFFFF (Signed = -1, Unsigned = UInt.MAX_VALUE)
+        // Given
         val bytes = ByteArray(4)
+
+        // When
         bytes.writeIntAt(offset = 0, value = -1)
-
-        // Then 1: Memory inspection
-        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF, 0xFF, 0xFF)
-
-        // Then 2: Signed vs Unsigned contrast
         val signedActual: Int = bytes.readIntAt(offset = 0)
         val unsignedActual: UInt = bytes.readUIntAt(offset = 0)
 
-        assertEquals(-1, signedActual, "readIntAt must evaluate 0xFFFFFFFF as signed -1")
-        assertEquals(UInt.MAX_VALUE, unsignedActual, "readUIntAt must evaluate 0xFFFFFFFF as UInt.MAX_VALUE")
+        // Then
+        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF, 0xFF, 0xFF)
+        assertEquals(-1, signedActual)
+        assertEquals(UInt.MAX_VALUE, unsignedActual)
     }
 
     @Test
     fun should_preserveInterleavedHighAndLowBits_when_roundTrippingIntAtOffset() {
-        // Given: Interleaved negative/positive byte sequence at unaligned offset
+        // Given
         val uIntValue = 0x8001FE02u
         val offset = 2
         val bytes = ByteArray(8)
@@ -173,62 +165,58 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_writeBytesInExplicitBigEndianOrder_when_writingShort() {
-        // Given: Asymmetric 16-bit value
+        // Given
         val bytes = ByteArray(2)
         val value = 0x1234
 
         // When
         bytes.writeIntAsShortAt(offset = 0, value = value)
 
-        // Then: MSB first
+        // Then
         bytes.assertBytesAt(offset = 0, 0x12, 0x34)
     }
 
     @Test
-    fun should_roundTripShortBoundariesWithoutLoss_when_writingAndReading() {
+    fun should_roundTripShortBoundariesWithoutLoss_when_writingAndReadingShort() {
+        // Given
         val boundaryValues = listOf(
-            0,      // Min Unsigned Short (0x0000)
+            0,
             1,
             32767,  // Max Signed Short (0x7FFF)
             32768,  // Signed boundary (0x8000)
             65000,  // HLC clock counter scenario (0xFDE8)
             65535   // Max Unsigned Short (0xFFFF)
         )
-
         val bytes = ByteArray(2)
 
+        // When & Then
         for (value in boundaryValues) {
             bytes.writeIntAsShortAt(offset = 0, value = value)
             val actual = bytes.readUShortAt(offset = 0)
 
-            assertEquals(
-                expected = value,
-                actual = actual,
-                message = "Failed to preserve unsigned 16-bit value: $value (0x${value.toString(16)})"
-            )
+            assertEquals(value, actual)
         }
     }
 
     @Test
     fun should_differentiateSignedAndUnsignedShortReads_when_topBitIsSet() {
-        // Given: 0xFFFF (Signed = -1, Unsigned = 65,535)
+        // Given
         val bytes = ByteArray(2)
+
+        // When
         bytes.writeIntAsShortAt(offset = 0, value = 65535)
-
-        // Then 1: Memory inspection
-        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF)
-
-        // Then 2: Signed vs Unsigned contrast
         val signedActual: Short = bytes.readShortAt(offset = 0)
         val unsignedActual: Int = bytes.readUShortAt(offset = 0)
 
-        assertEquals((-1).toShort(), signedActual, "readShortAt must evaluate 0xFFFF as signed -1")
-        assertEquals(65535, unsignedActual, "readUShortAt must evaluate 0xFFFF as positive 65,535")
+        // Then
+        bytes.assertBytesAt(offset = 0, 0xFF, 0xFF)
+        assertEquals((-1).toShort(), signedActual)
+        assertEquals(65535, unsignedActual)
     }
 
     @Test
     fun should_preserveInterleavedHighAndLowBits_when_roundTrippingShortAtOffset() {
-        // Given: High/Low byte pattern (0x80FE -> 32,768 + 254 = 33,022) at unaligned offset
+        // Given
         val value = 0x80FE
         val offset = 3
         val bytes = ByteArray(6)
@@ -248,38 +236,33 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_performReadAndWriteOperationsAtArbitraryOffsets_when_offsetIsUnaligned() {
-        // Given: A buffer padded with sentinel bytes (0xAA) to detect overrun/bleed
+        // Given
         val buffer = ByteArray(32) { 0xAA.toByte() }
-
         val longVal = 0x0102030405060708L
         val intVal = 0x11223344
         val uShortVal = 65000 // 0xFDE8
 
-        // When: Write at arbitrary offsets
+        // When
         buffer.writeLongAt(offset = 1, value = longVal)
         buffer.writeIntAt(offset = 10, value = intVal)
         buffer.writeIntAsShortAt(offset = 15, value = uShortVal)
 
-        // Then: Byte slices
+        // Then
         buffer.assertBytesAt(offset = 1, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08)
         buffer.assertBytesAt(offset = 10, 0x11, 0x22, 0x33, 0x44)
         buffer.assertBytesAt(offset = 15, 0xFD, 0xE8)
-
-        // Then: Values read back
         assertEquals(longVal, buffer.readLongAt(offset = 1))
         assertEquals(intVal, buffer.readIntAt(offset = 10))
         assertEquals(uShortVal, buffer.readUShortAt(offset = 15))
-
-        // Then: Sentinel byte integrity
-        assertEquals(0xAA.toByte(), buffer[0], "Byte before offset 1 must remain untouched")
-        assertEquals(0xAA.toByte(), buffer[9], "Byte between Long and Int must remain untouched")
-        assertEquals(0xAA.toByte(), buffer[14], "Byte between Int and Short must remain untouched")
-        assertEquals(0xAA.toByte(), buffer[17], "Byte after Short must remain untouched")
+        assertEquals(0xAA.toByte(), buffer[0])
+        assertEquals(0xAA.toByte(), buffer[9])
+        assertEquals(0xAA.toByte(), buffer[14])
+        assertEquals(0xAA.toByte(), buffer[17])
     }
 
     @Test
     fun should_roundTripLongAtHighOffsetThirteen_when_simulatingRecordPayload() {
-        // Given: An offset of 13 in a 27-byte record
+        // Given
         val offset = 13
         val bytes = ByteArray(27)
         val value = 0x7FEDCBA987654321L
@@ -302,8 +285,10 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_throwIndexOutOfBoundsException_when_readingOrWritingLongBeyondBounds() {
+        // Given
         val value = 0x0102030405060708L
 
+        // When & Then
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(7).readLongAt(offset = 0) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(7).writeLongAt(offset = 0, value = value) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(8).readLongAt(offset = 1) }
@@ -312,8 +297,10 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_throwIndexOutOfBoundsException_when_readingOrWritingIntBeyondArrayBounds() {
+        // Given
         val intVal = 0x12345678
 
+        // When & Then
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(3).readIntAt(offset = 0) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(3).writeIntAt(offset = 0, value = intVal) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(4).readIntAt(offset = 1) }
@@ -322,8 +309,10 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
 
     @Test
     fun should_throwIndexOutOfBoundsException_when_readingOrWritingShortBeyondArrayBounds() {
+        // Given
         val shortVal = 32000
 
+        // When & Then
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(1).readUShortAt(offset = 0) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(1).writeIntAsShortAt(offset = 0, value = shortVal) }
         assertFailsWith<IndexOutOfBoundsException> { ByteArray(2).readUShortAt(offset = 1) }
@@ -331,14 +320,6 @@ class ByteArrayExtensionsTest : MochaPlatformTest() {
     }
 }
 
-// ===================================================================
-// TEST HELPERS
-// ===================================================================
-
-/**
- * Asserts that [expected] bytes match the slice in [ByteArray] starting at [offset].
- * Accepts [Int] hex literals (e.g., 0x80, 0xFF) for clean test ergonomics.
- */
 internal fun ByteArray.assertBytesAt(offset: Int, vararg expected: Int) {
     expected.forEachIndexed { i, expectedInt ->
         val actualIndex = offset + i

@@ -7,7 +7,6 @@ import com.mochame.logger.test.TestLoggerModule
 import com.mochame.sync.di.StaggeredDbRetryPolicyModule
 import com.mochame.sync.internal.fixtures.node.FakeNodeContextManager
 import com.mochame.sync.internal.fixtures.node.SpyBootStatusManager
-import com.mochame.sync.di.node.FixturesNodeModule
 import com.mochame.platform.fixtures.FakeTransactionProvider
 import com.mochame.platform.fixtures.di.FixturesPlatformModule
 import com.mochame.sync.api.metadata.FeatureContext
@@ -28,6 +27,8 @@ import com.mochame.sync.domain.infrastructure.SyncReceiver
 import com.mochame.sync.domain.serialization.IntentCodec
 import com.mochame.sync.domain.serialization.PayloadCodec
 import com.mochame.sync.api.network.SyncTransport
+import com.mochame.sync.di.fixtures.FixturesNodeModule
+import com.mochame.sync.infrastructure.adaptor.SyncReceiverRegistry
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Module
@@ -66,6 +67,23 @@ class CoordinatorTestModule {
     @Named("stubB")
     @Single(binds = [SyncReceiver::class, FakeSyncReceiver::class])
     fun provideFakeSyncReceiverB(): FakeSyncReceiver = FakeSyncReceiver(FeatureContext.TEST_STUB_B)
+
+    @Single
+    internal fun provideTestSyncReceiverRegistry(
+        @Named("stubA") stubA: FakeSyncReceiver,
+        @Named("stubB") stubB: FakeSyncReceiver
+    ): SyncReceiverRegistry {
+        val registry = SyncReceiverRegistry()
+
+        FeatureContext.entries.filter { it.isProductionEntity }.forEach { prodContext ->
+            registry.register(FakeSyncReceiver(prodContext))
+        }
+
+        registry.register(stubA)
+        registry.register(stubB)
+
+        return registry
+    }
 }
 
 @Factory

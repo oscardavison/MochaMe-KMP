@@ -9,10 +9,13 @@ import kotlin.time.Duration.Companion.seconds
 class JanitorMaintenanceConfig(
     /** Default: [DEFAULT_MAINTENANCE_DELAY] **/
     val maintenanceInterval: Duration = DEFAULT_MAINTENANCE_DELAY,
+
     /** Default: [STARTUP_TIMEOUT] **/
     val startupTimeout: Duration = STARTUP_TIMEOUT,
+
     /** Default: [DEFAULT_STALE_THRESHOLD] **/
     val staleThreshold: Duration = DEFAULT_STALE_THRESHOLD,
+
     /** Default: [DEFAULT_RETRY_THRESHOLD] **/
     val retryThreshold: Int = DEFAULT_RETRY_THRESHOLD
 ) {

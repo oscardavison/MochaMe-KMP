@@ -1,18 +1,17 @@
+@file:OptIn(ExperimentalKermitApi::class)
+
 package com.mochame.sync.infrastructure.node
 
 import co.touchlab.kermit.ExperimentalKermitApi
-import co.touchlab.kermit.Logger
-import co.touchlab.kermit.TestLogWriter
-import com.mochame.logger.test.TestLoggerModule
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.getPhysicalRowCount
 import com.mochame.support.runDatabaseEnvironment
-import com.mochame.sync.data.NodeContextDao
+import com.mochame.sync.api.models.NodeContext
 import com.mochame.sync.data.SyncMicroSchema
 import com.mochame.sync.data.SyncMicroSchemaConstructor
 import com.mochame.sync.data.nodeTableName
-import com.mochame.sync.di.data.SyncPersistenceTestModule
-import com.mochame.sync.api.models.NodeContext
+import com.mochame.sync.di.infrastructure.NodeContextTestEnv
+import com.mochame.sync.di.infrastructure.NodeContextTestModule
 import com.mochame.utils.fixtures.TestHlcFactory
 import com.mochame.utils.fixtures.TestNodeId
 import kotlinx.coroutines.CompletableDeferred
@@ -22,8 +21,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.TestScope
-import org.koin.core.annotation.Factory
-import org.koin.core.annotation.Module
 import org.koin.plugin.module.dsl.modules
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,46 +29,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
-@Factory
-internal class NodeContextIntTestEnv(
-    val db: SyncMicroSchema,
-    val dao: NodeContextDao,
-    val manager: DefaultNodeContextManager,
-    val logger: Logger,
-    val writer: TestLogWriter
-)
-
-@Module(
-    includes = [
-        SyncPersistenceTestModule::class,
-        TestLoggerModule::class,
-    ]
-)
-internal class NodeContextIntTestModule {
-    @org.koin.core.annotation.Single
-    fun provideNodeContextManager(
-        dao: NodeContextDao,
-        logger: Logger
-    ): DefaultNodeContextManager = DefaultNodeContextManager(
-        dao = dao,
-        ioContext = Dispatchers.IO,
-        mutex = Mutex(),
-        logger = logger
-    )
-}
-
-private inline fun runEnv(crossinline block: suspend NodeContextIntTestEnv.(TestScope) -> Unit) =
-    runDatabaseEnvironment<SyncMicroSchema, NodeContextIntTestEnv>(
+private inline fun runEnv(crossinline block: suspend NodeContextTestEnv.(TestScope) -> Unit) =
+    runDatabaseEnvironment<SyncMicroSchema, NodeContextTestEnv>(
         constructor = SyncMicroSchemaConstructor,
-        koinSetup = { modules(NodeContextIntTestModule::class) },
-        factory = { db ->
-            val dao = db.nodeContextDao()
-            val koin = org.koin.mp.KoinPlatformTools.defaultContext().get()
-            val logger: Logger = koin.get()
-            val writer: TestLogWriter = koin.get()
-            val manager: DefaultNodeContextManager = koin.get()
-            NodeContextIntTestEnv(db, dao, manager, logger, writer)
-        },
+        koinSetup = { modules(NodeContextTestModule::class) },
         block = block
     )
 
