@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalKermitApi::class)
 
-package com.mochame.sync.spi
+package com.mochame.sync.utils
 
 import co.touchlab.kermit.ExperimentalKermitApi
 import com.mochame.support.MochaPlatformTest

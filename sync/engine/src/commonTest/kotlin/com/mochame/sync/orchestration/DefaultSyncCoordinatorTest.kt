@@ -3,6 +3,7 @@
 package com.mochame.sync.orchestration
 
 import com.mochame.annotations.AppBackgroundScope
+import com.mochame.annotations.InternalTestApi
 import com.mochame.annotations.IoContext
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.awaitCondition
@@ -12,7 +13,6 @@ import com.mochame.sync.api.exceptions.MochaException
 import com.mochame.sync.api.metadata.FeatureContext
 import com.mochame.sync.api.metadata.MutationOp
 import com.mochame.sync.domain.model.SyncStatus
-import com.mochame.sync.common.InternalTestApi
 import com.mochame.sync.di.coordinator.CoordinatorTestModule
 import com.mochame.sync.di.coordinator.SyncCoordinatorTestEnv
 import com.mochame.sync.utils.deriveContext
