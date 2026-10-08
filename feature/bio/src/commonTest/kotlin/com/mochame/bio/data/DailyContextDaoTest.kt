@@ -1,7 +1,7 @@
 package com.mochame.bio.data
 
 import app.cash.turbine.test
-import com.mochame.bio.di.BioInfraTestModule
+import com.mochame.bio.di.DailyContextDataTestModule
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runDatabaseEnvironment
 import com.mochame.utils.fixtures.TestHlcFactory
@@ -19,7 +19,7 @@ import kotlin.test.assertNull
 private inline fun runEnv(crossinline block: suspend DailyContextDao.(TestScope) -> Unit) =
     runDatabaseEnvironment<BioMicroSchema, DailyContextDao>(
         constructor = BioMicroSchemaConstructor,
-        koinSetup = { modules(BioInfraTestModule::class) },
+        koinSetup = { modules(DailyContextDataTestModule::class) },
         block = block
     )
 

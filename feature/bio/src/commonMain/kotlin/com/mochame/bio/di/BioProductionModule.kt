@@ -17,6 +17,10 @@ import org.koin.core.annotation.Single
 class BioProductionModule
 
 @Module
+@ComponentScan("com.mochame.bio.data")
+class BioDataModule
+
+@Module
 class BioSyncModule {
 
     @Single(createdAtStart = true)

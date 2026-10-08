@@ -24,7 +24,7 @@ internal interface LocalFirstEngine {
      * @param op Mutation operation type (UPSERT or DELETE).
      * @param fetchExistingState Lambda fetching current persisted entity state.
      * @param computeChange Lambda returning desired target entity state.
-     * @param persist Lambda writing the updated entity to local storage.
+     * @param save Lambda writing the updated entity to local storage.
      * @param onSkip Lambda handling early-exit skip scenarios (returns fallback result).
      * @return Result identifier or operation outcome code.
      */
@@ -36,7 +36,7 @@ internal interface LocalFirstEngine {
         op: MutationOp,
         fetchExistingState: suspend (id: Long) -> T?,
         computeChange: suspend (existing: T?) -> T,
-        persist: suspend (stamped: T) -> Long,
+        save: suspend (stamped: T) -> Long,
         onSkip: (fallback: T?) -> Long
     ): Long
 

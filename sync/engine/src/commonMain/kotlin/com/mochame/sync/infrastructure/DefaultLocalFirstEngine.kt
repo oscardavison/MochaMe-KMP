@@ -53,7 +53,7 @@ internal class DefaultLocalFirstEngine(
         op: MutationOp,
         fetchExistingState: suspend (id: Long) -> T?,
         computeChange: suspend (existing: T?) -> T,
-        persist: suspend (stamped: T) -> Long,
+        save: suspend (stamped: T) -> Long,
         onSkip: (fallback: T?) -> Long
     ): Long {
         bootProvider.awaitReady()
@@ -82,7 +82,7 @@ internal class DefaultLocalFirstEngine(
                     candidateKey = candidateKey,
                     op = op,
                     outboundContext = encodeContext,
-                    persistAction = { persist(encodeContext.stampedState) }
+                    persistAction = { save(encodeContext.stampedState) }
                 )
             }
         }

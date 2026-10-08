@@ -39,7 +39,7 @@ private inline fun runEnv(crossinline block: suspend NodeContextTestEnv.(TestSco
 class NodeContextManagerTest : MochaPlatformTest() {
 
     // -----------------------------------------------------------
-    // CONTEXT INTEGRITY / MAPPING
+    // MAPPERS
     // -----------------------------------------------------------
     @Test
     fun should_establishCleanDefaultContext_when_databaseIsEmpty() = runEnv {
@@ -98,8 +98,7 @@ class NodeContextManagerTest : MochaPlatformTest() {
     @Test
     fun should_initialize_single_id_when_async_polls_to_manager() =
         runEnv { scope ->
-            val defaultManager =
-                DefaultNodeContextManager(dao, Dispatchers.IO, Mutex(), logger)
+            val defaultManager = DefaultNodeContextManager(dao, Dispatchers.IO, Mutex(), logger)
             val threads = 8
             val readySignals = List(threads) { CompletableDeferred<Unit>() }
             val gate = CompletableDeferred<Unit>()

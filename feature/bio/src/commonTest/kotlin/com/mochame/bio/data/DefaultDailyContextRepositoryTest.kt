@@ -1,8 +1,8 @@
 package com.mochame.bio.data
 
 import app.cash.turbine.test
-import com.mochame.bio.di.BioInfraTestModule
 import com.mochame.bio.di.BioTestEnv
+import com.mochame.bio.di.DailyContextDataTestModule
 import com.mochame.bio.domain.DailyContext
 import com.mochame.support.MochaPlatformTest
 import com.mochame.support.runDatabaseEnvironment
@@ -19,7 +19,7 @@ private inline fun runEnv(
     crossinline block: suspend BioTestEnv.(TestScope) -> Unit
 ) = runDatabaseEnvironment<BioMicroSchema, BioTestEnv>(
     constructor = BioMicroSchemaConstructor,
-    koinSetup = { modules(BioInfraTestModule::class) },
+    koinSetup = { modules(DailyContextDataTestModule::class) },
     block = { testScope ->
         block(testScope)
     }

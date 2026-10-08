@@ -105,7 +105,7 @@ class DefaultSyncAdaptorFactoryTest : MochaPlatformTest() {
             op: MutationOp,
             fetchExistingState: suspend (id: Long) -> T?,
             computeChange: suspend (existing: T?) -> T,
-            persist: suspend (stamped: T) -> Long,
+            save: suspend (stamped: T) -> Long,
             onSkip: (fallback: T?) -> Long
         ): Long = 0L
 

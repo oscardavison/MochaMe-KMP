@@ -6,21 +6,30 @@ import com.mochame.sync.api.codec.FeatureCodec
 import com.mochame.sync.api.codec.CodecResolver
 
 /**
- * Features define their query logic within the provided pipeline of [SyncAdaptorFactory].
+ * Adaptor for feature database actions to delegate synchronization metadata, transport handling,
+ * and conflict resolution to the local-first sync system.
  */
 interface SyncAdaptor<T : LocalFirstEntity<T>> {
+    /**
+     * Inserts or updates an entity, tracking modified fields for synchronization.
+     *
+     * @param candidateKey Local primary key.
+     * @param computeChange Produces the entity to persist, comparing against any existing state.
+     * @return The persisted primary key (once metadata is handled).
+     */
     suspend fun upsert(candidateKey: Long, computeChange: suspend (existing: T?) -> T): Long
     /**
-     * Defaults computeChange to call [LocalFirstEntity.withDeleteState] passing true.
-     * Intended behavior is for features to nullify their domain fields if isDeleted,
-     * else copy their state and set isDeleted.
+     * Marks an entity as deleted.
+     *
+     * @param candidateKey The primary key to delete.
+     * @param computeChange Optional mutation block. Defaults to calling [LocalFirstEntity.withDeleteState], providing true.
+     * @return The updated primary key.
      */
     suspend fun delete(candidateKey: Long, computeChange: (suspend (existing: T?) -> T)? = null): Long
 }
 
 /**
- * Provides infrastructural dependencies to ensure the synchronization system
- * can act on both inbound and outbound intents for a given feature.
+ * Creates [SyncAdaptor] instances wired to a feature's local persistence environment and codecs.
  */
 interface SyncAdaptorFactory {
     operator fun <T : LocalFirstEntity<T>> invoke(

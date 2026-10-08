@@ -11,7 +11,7 @@ WORKDIR /app
 RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
 # Copy binaries with correct non-root ownership
-COPY --chown=appuser:appuser sync/server/build/install/server /app
+COPY --chown=appuser:appuser server/build/install/server /app
 
 # Switch to non-root user for runtime
 USER appuser

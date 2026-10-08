@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.1.1"
+VERSION="0.2.0"
 DIST_DIR="${PROJECT_ROOT}/dist"
 SERVER_BUILD_DIST="${PROJECT_ROOT}/sync/server/build/distributions"
 CLI_STAGE="${PROJECT_ROOT}/build/staging/mochame-cli-pkg"

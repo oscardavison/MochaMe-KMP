@@ -68,37 +68,6 @@ private inline fun runEnv(
 class DefaultSyncCoordinatorTest : MochaPlatformTest() {
 
     // -------------------------------------------------------------------------
-    // Initialization & Production Receiver Validation
-    // -------------------------------------------------------------------------
-
-//  This does work as intended I just cant capture the instance creation error without it breaking my build
-//    @Test
-//    fun should_throwInternalException_when_productionSyncReceiversAreMissingOnInit() = runEnv(
-//        overrideSetup = {
-//            modules(
-//                module {
-//                    single<SyncReceiverRegistry> { SyncReceiverRegistry() }
-//                }
-//            )
-//        }
-//    ) {
-//        // Given: SyncReceiverRegistry provided without production sync receivers
-//
-//        // When / Then
-//        assertFailsWith<MochaException.Persistent.Internal> {
-//            coordinator
-//        }
-//    }
-
-    @Test
-    fun should_initializeSuccessfully_when_allProductionSyncReceiversAreRegistered() = runEnv {
-        // Given: CoordinatorTestModule provides SyncReceiverRegistry with all production receivers
-
-        // When / Then
-        assertNotNull(coordinator)
-    }
-
-    // -------------------------------------------------------------------------
     // Boot Readiness
     // -------------------------------------------------------------------------
 

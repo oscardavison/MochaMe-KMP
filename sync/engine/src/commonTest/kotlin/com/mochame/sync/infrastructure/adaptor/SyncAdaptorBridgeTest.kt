@@ -258,7 +258,7 @@ class SyncAdaptorBridgeTest : MochaPlatformTest() {
             op: MutationOp,
             fetchExistingState: suspend (id: Long) -> T?,
             computeChange: suspend (existing: T?) -> T,
-            persist: suspend (stamped: T) -> Long,
+            save: suspend (stamped: T) -> Long,
             onSkip: (fallback: T?) -> Long
         ): Long {
             localInvocations.add(
@@ -270,7 +270,7 @@ class SyncAdaptorBridgeTest : MochaPlatformTest() {
                     op = op,
                     fetchExistingState = fetchExistingState as suspend (Long) -> Any?,
                     computeChange = computeChange as suspend (Any?) -> Any,
-                    persist = persist as suspend (Any) -> Long,
+                    persist = save as suspend (Any) -> Long,
                     onSkip = onSkip as (Any?) -> Long
                 )
             )

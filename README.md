@@ -1,7 +1,9 @@
 # MochaMe-KMP
-## v0.1.1
+## v0.2.0
 
-<img src="/docs/images/readme_applogo.webp" alt="app logo">
+<p align="center">
+  <img src="/docs/images/readme_applogo.webp" alt="app logo" width="220" height="288">
+</p>
 
 ---
 
@@ -13,47 +15,8 @@
 Needs Updating 
 
 <p align="center">
-  <img width="220" height="288" alt="logo" src="https://github.com/user-attachments/assets/827177dc-1a2e-4d1b-8156-facf8df9ebe9" />
+  <img width="220" height="288" alt="logo" src="/docs/images/readme_applogo.webp" />
 </p>
-
-</details>
-
----
-
-<details>
-<summary><b> Multiplatform Architecture </b></summary>
-
-#### Approach to Development:
-
-Needs Updating but general idea:
-
-<br>
-
-```text
-┌────────────────────────────────────────┐
-│              app:assembly              │
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│                 mocha:                 │
-│  (mocha-feature, mocha-schema, etc.)   │
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│              sync-engine               │
-└───────────────────┬────────────────────┘
-                    │
-┌───────────────────▼────────────────────┐
-│                  core:                 │
-│  (sync-contract, platform, logger)     │
-└────────────────────────────────────────┘
-```
-
-<br>
-
-<img src="/docs/images/project_dependency_flow.webp" alt="project dependency flow mermaid diagram">
-
-<br>
 
 </details>
 
@@ -134,63 +97,13 @@ Needs Updating but general idea:
 ---
 
 <details>
-<summary><b> AI Approach for Development </b></summary>
-
-#### AI Usage Aim:
-
-Needs Updating
-
-Different contexts assigned roles attempting to achieve domain specialization and cross verification.
-This has sort of changed to a standard verifier and architect context between Claude and Gemini with some Antigravity CLI usage.
-If the component is more complex, I will create specific roles.
-
-| Lead    | Domain       | Focus & Technical Details                     |
-|:--------| :----------- |:----------------------------------------------|
-| **ARL** | Architecture | Decoupling, DI (Koin), and Module Boundaries. |
-| **CCL** | Concurrency  | Coroutines, Mutexes, and HLC Causality.       |
-| **DPL** | Persistence  | Room KMP, SQLite Atomicity, and Migrations.   |
-| **SSL** | Safety       | Exception Mapping, Boot State, Recovery.      |
-| **LFL** | Local First  | Causality, server operations, and conflicts.  |
-
-
-#### Anki Integration
-
-Every major implementation discussion must conclude with a flashcard:
-
-    Concept: [Name of the Pattern/Concept]
-
-    Component: [The specific API or Code Block]
-
-    Problem/Question: [The failure state this solves]
-
-    Breakdown: [Bullet points explaining the 'Why']
-
-    Code/Analogy: [A lean code snippet or a grounded analogy]
-
-    Gradle 10.0 Warning: [Specific configuration or versioning trap]
-
-
-</details>
-
----
-
-<details>
 <summary><b> Data Model </b></summary>
 
 <br>
 
-Not really the purpose of the project, more so to learn other things. At its core, sleep context wraps each day, and the non-nullable fields of any moment:
+Simply to provide a model for the local-first testing. Only DailyContext is implemented:
 
-```
-        +Int satisfactionScore "1-10"
-        +Int mood
-        +Int energyDelta "-5 to +5"
-        +Int intensityScale "1-10"
-```
-Weather/meta context to be handled in the background. A moment must be linked to a general domain (e.g. Kotlin or Exercise), with the topic being optional (e.g. concurrency or swimming). I hope this to be enough to generate useful analytics (mapping mood to a simple PAD model for the current scope) whilst requiring minimal input. 
-Social, environmental (made easier by the ability to save a space and its biophilia), journalling, duration, and entry energy, are all optional and serve only to enrich the analysis if the user wants.
-
-The model below is changing, and now includes HLCs all over. 
+The model below is changing, and now includes sync metadata. 
 ```mermaid
 classDiagram
     %% --- BIO MODULE (The Context) ---
@@ -336,32 +249,17 @@ classDiagram
 
 <br>
 
-### Testing Architecture
+### Testing 
 
-| Tier                   | Target              | Technology                     | Description                                                                                   |
-|:-----------------------|:--------------------|:-------------------------------|:----------------------------------------------------------------------------------------------|
-| **Common**             | `commonTest`        | `kotlin.test`, Turbine, MockK  | Platform-agnostic logic, ViewModels, and Flow/Coroutine verification.                         |
-| **JVM**                | `jvmTest`           | JUnit 5                        | High-speed desktop-side execution for shared logic and Desktop-specific components.           |
-| **Host (Robolectric)** | `androidHostTest`   | Robolectric, JUnit 4 (Vintage) | Simulated Android environment running on the JVM. Includes SQLite/Room database verification. |
-| **Instrumented**       | `androidDeviceTest` | AndroidJUnitRunner             | Hardware-accurate tests running on physical devices or emulators for UI and integration.      |
+| Command                        | Target              | Dependencies                   |
+|:-------------------------------|:--------------------|:-------------------------------|
+| **allTests**                   | `commonTest`        | `kotlin.test`, Turbine         |
+| **jvmTest**                    | `jvmTest`           | JUnit 5                        |
+| **testAndroidHost**            | `androidHostTest`   | Robolectric, JUnit 4 (Vintage) |
+| **connectedAndroidDeviceTest** | `androidDeviceTest` | AndroidJUnitRunner             |
+| **linuxX64Test**               | `linuxX64Test`      | Parity with `commonTest`       |
 
----
-
-### Testing Design Pattern
-
-UPDATE - no longer propagating fakes
-
-### Verification Commands
-
-Needs changing
-
-#### Local Suite (Fastest)
-
-Needs changing
-
-#### Full Suite (Comprehensive)
-
-Needs changing
+Server tested with `Kotest`, which I would probably integrate into future testing.
 
 </details>
 

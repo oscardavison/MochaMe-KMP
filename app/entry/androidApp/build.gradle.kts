@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.koin.compiler)
 }
 
-val appVersion = "0.1.1"
+val appVersion = "0.2.0"
 
 base {
     archivesName.set("mochame-v${appVersion}")
@@ -20,7 +20,7 @@ android {
         minSdk = libs.versions.android.sdk.min.get().toInt()
         targetSdk = libs.versions.android.sdk.target.get().toInt()
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

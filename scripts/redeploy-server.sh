@@ -5,7 +5,7 @@ set -euo pipefail
 # Configuration & Paths
 # ------------------------------------------------------------------------------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.1.1"
+VERSION="0.2.0"
 DIST_DIR="${PROJECT_ROOT}/dist"
 DIST_ARCHIVE="${DIST_DIR}/server-${VERSION}.tar.gz"
 
@@ -58,6 +58,7 @@ if [[ "${CLEANUP_TEMP}" == true ]]; then
     rm -f "${TEMP_ARCHIVE}"
 fi
 
+ssh -i "${SSH_KEY}" "${AZURE_HOST}" "mkdir -p ~/mochame/server"
 if [[ -f "${PROJECT_ROOT}/sync/server/Dockerfile" ]]; then
     scp -i "${SSH_KEY}" "${PROJECT_ROOT}/sync/server/Dockerfile" "${AZURE_HOST}:~/mochame/server/Dockerfile"
 fi
@@ -77,14 +78,14 @@ docker compose down --remove-orphans
 echo "==> Deleting server-side SQLite state and old binaries..."
 rm -rf server-data
 rm -rf ~/.local/share/mochame
-rm -rf sync/server/build/install/server
+rm -rf server/build/install/server
 
 echo "==> Pre-creating server-data as azureuser (UID 1000)..."
 mkdir -p server-data
 
 echo "==> Unpacking new server distribution..."
-mkdir -p sync/server/build/install/server
-tar -xmzf /tmp/server-dist.tar.gz -C sync/server/build/install/server
+mkdir -p server/build/install/server
+tar -xmzf /tmp/server-dist.tar.gz -C server/build/install/server
 rm -f /tmp/server-dist.tar.gz
 
 echo "==> Starting container..."

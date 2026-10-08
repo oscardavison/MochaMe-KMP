@@ -46,6 +46,7 @@ include(":core:utils")
 include(":core:platform")
 
 include(":core:test:support")
+include(":core:test:fixtures-sync")
 include(":core:test:test-logger")
 include(":core:test:fixtures-utils")
 include(":core:test:fixtures-platform")

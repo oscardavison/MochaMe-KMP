@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.1.1"
+VERSION="0.2.0"
 DIST_DIR="${PROJECT_ROOT}/dist"
 SSH_KEY="${HOME}/.ssh/mochame-relay_key.pem"
 AZURE_HOST="azureuser@9.160.35.162"

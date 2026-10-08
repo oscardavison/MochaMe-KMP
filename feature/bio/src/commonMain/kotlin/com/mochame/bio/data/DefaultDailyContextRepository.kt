@@ -7,14 +7,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
-/**
- * Default implementation of [DailyContextRepository] for local-first daily context data.
- * Extends [LocalFirstRepository] to leverage [com.mochame.sync.domain.LocalFirstEngine] for state persistence,
- * HLC stamping, and sync integration.
- *
- * @param dailyContextDao Room DAO for bio daily context persistence.
- * @param adaptor Sync adaptor handling local-first mutations.
- */
 @Single(binds = [DailyContextRepository::class])
 class DefaultDailyContextRepository(
     private val dailyContextDao: DailyContextDao,
@@ -34,6 +26,9 @@ class DefaultDailyContextRepository(
     override suspend fun getActiveContextById(epochDay: Long): DailyContext? =
         dailyContextDao.getActiveContextById(epochDay)?.toDomain()
 
+    override suspend fun getContextById(epochDay: Long): DailyContext? =
+        dailyContextDao.getContextById(epochDay)?.toDomain()
+
     // --- MAINTENANCE / SYNC ---
     override suspend fun hardDeleteContexts(cutoff: Long) =
         dailyContextDao.hardDeletePruning(cutoff)
@@ -49,5 +44,6 @@ class DefaultDailyContextRepository(
         isNapped = newState.isNapped,
         notes = newState.notes,
         lastModified = newState.lastModified,
+        isDeleted = newState.isDeleted
     ) ?: newState
 }

@@ -77,25 +77,12 @@ internal class DefaultSyncCoordinator(
     private val logger =
         logger.withTags(LogTags.Layer.ORCH, LogTags.Domain.SYNC, "MsCord")
 
-    init {
-        val registered = receiverRegistry.receivers.keys
-        val requiredContexts = FeatureContext.entries.filter { it.isProductionEntity }.toSet()
-
-        val missing = requiredContexts - registered
-        if (missing.isNotEmpty()) {
-            val errorMsg = "Missing SyncReceiver registration for: $missing."
-            logger.e { errorMsg }
-            throw MochaException.Persistent.Internal(errorMsg)
-        }
-    }
-
     private val coordinatorJob = SupervisorJob(appBackgroundScope.coroutineContext[Job])
     private val coordinatorScope = CoroutineScope(
         appBackgroundScope.coroutineContext + coordinatorJob + CoroutineName("SyncCoordinator")
     )
     private val backgroundDispatcher = coordinatorScope.coroutineContext[ContinuationInterceptor]
         ?: error("Dispatcher retrieval error")
-
 
     private val SyncIntent.receiver: SyncReceiver
         get() = receiverRegistry.receivers[featureContext] ?: run {

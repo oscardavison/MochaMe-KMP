@@ -10,6 +10,8 @@ plugins {
     id("io.insert-koin.compiler.plugin")
     id("com.google.devtools.ksp")
     id("androidx.room")
+    id("org.jetbrains.kotlinx.kover")
+
 }
 
 standardConfigurations()

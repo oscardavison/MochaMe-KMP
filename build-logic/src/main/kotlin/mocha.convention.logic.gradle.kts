@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("com.android.kotlin.multiplatform.library")
     id("io.insert-koin.compiler.plugin")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 standardConfigurations()

@@ -46,7 +46,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
         op = MutationOp.UPSERT,
         fetchExistingState = fetchById,
         computeChange = computeChange,
-        persist = save,
+        save = save,
         onSkip = {
             logger.v { "Skipping Upsert [Context:$featureContext, ID:$candidateKey]" }
             0L
@@ -64,7 +64,7 @@ internal class SyncAdaptorBridge<T : LocalFirstEntity<T>>(
         op = MutationOp.DELETE,
         fetchExistingState = fetchById,
         computeChange = computeChange ?: { existing -> existing!!.withDeleteState(true) },
-        persist = save,
+        save = save,
         onSkip = {
             logger.v { "Skipping Delete [Context:$featureContext, ID:$candidateKey]" }
             0L

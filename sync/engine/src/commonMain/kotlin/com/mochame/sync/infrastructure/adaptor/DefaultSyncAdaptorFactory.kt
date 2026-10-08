@@ -11,7 +11,7 @@ import com.mochame.sync.api.codec.CodecResolver
 import com.mochame.sync.api.codec.FeatureCodec
 import org.koin.core.annotation.Single
 
-@Single(binds = [SyncAdaptorFactory::class])
+@Single(binds = [SyncAdaptorFactory::class], createdAtStart = true)
 internal class DefaultSyncAdaptorFactory(
     private val engine: LocalFirstEngine,
     private val registry: SyncReceiverRegistry,

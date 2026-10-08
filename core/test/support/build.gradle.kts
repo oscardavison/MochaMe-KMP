@@ -21,7 +21,6 @@ kotlin {
             implementation(libs.test.robolectric)
             implementation(libs.androidx.test.core)
             implementation(libs.junit4)
-            implementation(libs.test.mockk)
             implementation(libs.androidx.junit.ktx)
         }
     }

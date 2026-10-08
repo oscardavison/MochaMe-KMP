@@ -46,7 +46,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Exe)
             packageName = "MochaMe"
-            packageVersion = "0.1.1"
+            packageVersion = "0.2.0"
             description = "MochaMe Local-First"
             vendor = "MochaMe"
             appResourcesRootDir.set(project.file("src/jvmMain/resources/package-resources"))
