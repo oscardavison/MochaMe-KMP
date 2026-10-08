@@ -14,10 +14,6 @@
 
 Needs Updating 
 
-<p align="center">
-  <img width="220" height="288" alt="logo" src="/docs/images/readme_applogo.webp" />
-</p>
-
 </details>
 
 ---
