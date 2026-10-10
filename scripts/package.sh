@@ -10,51 +10,51 @@ CLI_STAGE="${PROJECT_ROOT}/build/staging/mochame-cli-pkg"
 info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 success() { echo -e "\033[1;32m[SUCCESS]\033[0m $*"; }
 
-# ------------------------------------------------------------------------------
-# 0. NetworkConfig & Trap
-# ------------------------------------------------------------------------------
-NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/api/network/NetworkConfig.kt" | head -n 1)"
-
-if [[ -z "${NETWORK_CONFIG_FILE}" || ! -f "${NETWORK_CONFIG_FILE}" ]]; then
-    echo -e "\033[1;31m[ERROR]\033[0m NetworkConfig.kt not found." >&2
-    exit 1
-fi
-
-apply_cli_config() {
-    info "Applying Local Loopback NetworkConfig (127.0.0.1:8080)..."
-    cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.api.network
-
-import org.koin.core.annotation.Single
-
-@Single
-data class NetworkConfig(
-    val host: String = "127.0.0.1",
-    val port: Int = 8080,
-    val isSecure: Boolean = false,
-    val groupId: String = "frappe"
-)
-EOF
-}
-
-apply_remote_config() {
-    info "Applying Remote Production NetworkConfig (relay.mochame.me:443)..."
-    cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
-package com.mochame.sync.api.network
-
-import org.koin.core.annotation.Single
-
-@Single
-data class NetworkConfig(
-    val host: String = "relay.mochame.me",
-    val port: Int = 443,
-    val isSecure: Boolean = true,
-    val groupId: String = "frappe"
-)
-EOF
-}
-
-trap apply_remote_config EXIT
+## ------------------------------------------------------------------------------
+## 0. NetworkConfig & Trap
+## ------------------------------------------------------------------------------
+#NETWORK_CONFIG_FILE="$(find "${PROJECT_ROOT}" -type f -path "*/com/mochame/sync/api/network/NetworkConfig.kt" | head -n 1)"
+#
+#if [[ -z "${NETWORK_CONFIG_FILE}" || ! -f "${NETWORK_CONFIG_FILE}" ]]; then
+#    echo -e "\033[1;31m[ERROR]\033[0m NetworkConfig.kt not found." >&2
+#    exit 1
+#fi
+#
+#apply_cli_config() {
+#    info "Applying Local Loopback NetworkConfig (127.0.0.1:8080)..."
+#    cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
+#package com.mochame.sync.api.network
+#
+#import org.koin.core.annotation.Single
+#
+#@Single
+#data class NetworkConfig(
+#    val host: String = "127.0.0.1",
+#    val port: Int = 8080,
+#    val isSecure: Boolean = false,
+#    val groupId: String = "frappe"
+#)
+#EOF
+#}
+#
+#apply_remote_config() {
+#    info "Applying Remote Production NetworkConfig (relay.mochame.me:443)..."
+#    cat << 'EOF' > "${NETWORK_CONFIG_FILE}"
+#package com.mochame.sync.api.network
+#
+#import org.koin.core.annotation.Single
+#
+#@Single
+#data class NetworkConfig(
+#    val host: String = "relay.mochame.me",
+#    val port: Int = 443,
+#    val isSecure: Boolean = true,
+#    val groupId: String = "frappe"
+#)
+#EOF
+#}
+#
+#trap apply_remote_config EXIT
 
 # ------------------------------------------------------------------------------
 # 1. Clean and Setup Staging
@@ -79,8 +79,6 @@ EOF
 # ------------------------------------------------------------------------------
 # 2. Package Native CLI (on Loopback)
 # ------------------------------------------------------------------------------
-apply_cli_config
-
 info "Compiling Linux x64 Native CLI executable..."
 "${PROJECT_ROOT}/gradlew" :app:entry:linuxCliApp:linkReleaseExecutableLinuxX64
 
@@ -103,8 +101,6 @@ success "CLI packaging complete. Artifacts written to ${DIST_DIR}"
 # ------------------------------------------------------------------------------
 # 3. Package JVM Desktop App (Remote Config)
 # ------------------------------------------------------------------------------
-apply_remote_config
-
 info "Building JVM Desktop package..."
 "${PROJECT_ROOT}/gradlew" :app:entry:jvmApp:packageDeb
 

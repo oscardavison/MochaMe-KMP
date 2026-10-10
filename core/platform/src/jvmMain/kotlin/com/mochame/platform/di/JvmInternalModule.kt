@@ -8,6 +8,8 @@ import com.mochame.platform.providers.AppPathsProvider
 import com.mochame.platform.providers.DatabaseLocation
 import com.mochame.platform.providers.JvmBufferProvider
 import com.mochame.sync.spi.BufferProvider
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.cio.CIO
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -59,6 +61,9 @@ actual class InternalPlatformModule : KoinComponent {
             logger = get { parametersOf(LogTags.Domain.SYNC, LogTags.Layer.INFRA) }
         )
     }
+
+    @Single
+    fun provideHttpClientEngine(): HttpClientEngine = CIO.create()
 }
 
 

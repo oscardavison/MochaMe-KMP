@@ -24,7 +24,7 @@ import co.touchlab.kermit.Logger
         SyncOrchestrationModule::class,
         SyncConcurrencyModule::class,
         StaggeredDbRetryPolicyModule::class,
-        NetworkModule::class
+
     ]
 )
 @ComponentScan("com.mochame.sync.api.network", "com.mochame.sync.api.repository", "com.mochame.sync.engine")
@@ -35,13 +35,6 @@ class StaggeredDbRetryPolicyModule {
     @Single(binds = [ExecutionPolicy::class])
     fun provideStaggeredDbPolicyModule(logger: Logger): ExecutionPolicy =
         StaggeredDbRetryPolicy(logger = logger)
-}
-
-@Module
-class NetworkModule {
-
-    @Single
-    fun provideHttpClientEngine(): HttpClientEngine = CIO.create()
 }
 
 @Module

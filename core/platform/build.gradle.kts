@@ -39,10 +39,16 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.koin.android)
             implementation(libs.work.runtime.ktx)
+            implementation(libs.ktor.client.okhttp)
         }
 
         jvmMain.dependencies {
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.ktor.client.cio)
+        }
+
+        linuxX64Main.dependencies {
+            implementation(libs.ktor.client.curl)
         }
 
     }
